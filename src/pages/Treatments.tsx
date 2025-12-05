@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -8,6 +8,13 @@ import {
   Stethoscope,
   Edit,
   Trash2,
+  Download,
+  FileText,
+  Check,
+  Clock,
+  SkipForward,
+  Play,
+  Paperclip,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +56,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { HorizontalTimeline } from "@/components/timeline/HorizontalTimeline";
 import { useData, ExtendedFinancialRecord } from "@/contexts/DataContext";
 import { Treatment } from "@/data/mockData";
@@ -107,6 +116,29 @@ export default function Treatments() {
     createFinancialRecord: false,
   });
 
+  // Stage dates for new treatment - map of stage orderIndex to scheduled date
+  const [stageDates, setStageDates] = useState<Record<number, string>>({});
+
+  // Get selected template stages for the form
+  const selectedTemplateStages = useMemo(() => {
+    if (!formData.templateId) return [];
+    return getStagesByTemplateId(formData.templateId);
+  }, [formData.templateId, getStagesByTemplateId]);
+
+  // Get all attachments from treatment stages for the info tab
+  const treatmentAttachments = useMemo(() => {
+    if (!selectedTreatment) return [];
+    const stages = getStagesByTreatmentId(selectedTreatment.id);
+    return stages
+      .filter((s) => s.attachments && s.attachments.length > 0)
+      .map((s) => ({
+        stageName: s.name,
+        stageIndex: s.orderIndex,
+        status: s.status,
+        attachments: s.attachments || [],
+      }));
+  }, [selectedTreatment, getStagesByTreatmentId]);
+
   const filteredTreatments = treatments.filter((t) => {
     const patient = getPatientById(t.patientId);
     const template = getTemplateById(t.templateId);
@@ -139,6 +171,7 @@ export default function Treatments() {
       notes: "",
       createFinancialRecord: false,
     });
+    setStageDates({});
     setEditingTreatment(null);
   };
 
@@ -189,15 +222,20 @@ export default function Treatments() {
         currentStageId: "",
       });
 
-      // Copy stages from template
+      // Copy stages from template with individual dates
       templateStages.forEach((stage, index) => {
+        // Use custom date if set, otherwise use treatment start date for first stage, empty for others
+        const customDate = stageDates[stage.orderIndex];
+        const scheduledDate =
+          customDate || (index === 0 ? formData.startDate : "");
+
         addTreatmentStage({
           id: generateId(),
           treatmentId,
           name: stage.name,
           status: index === 0 ? "in_progress" : "pending",
           orderIndex: stage.orderIndex,
-          scheduledDate: formData.startDate,
+          scheduledDate,
           notes: "",
         });
       });
@@ -264,7 +302,7 @@ export default function Treatments() {
               Novo Atendimento
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingTreatment ? "Editar" : "Iniciar Novo"} Atendimento
@@ -404,6 +442,73 @@ export default function Treatments() {
                   </label>
                 </div>
               )}
+
+              {/* Stage Dates Section - only for new treatments */}
+              {!editingTreatment && selectedTemplateStages.length > 0 && (
+                <div className="space-y-3">
+                  <Separator />
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-base font-semibold">
+                      Etapas do Procedimento
+                    </Label>
+                    <Badge variant="secondary" className="ml-auto">
+                      {selectedTemplateStages.length} etapa(s)
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Configure as datas de cada etapa. Deixe em branco para
+                    agendar depois.
+                  </p>
+                  <ScrollArea className="max-h-[200px] pr-3">
+                    <div className="space-y-2">
+                      {selectedTemplateStages.map((stage, index) => (
+                        <div
+                          key={stage.id}
+                          className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border"
+                        >
+                          <div
+                            className={`
+                            flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold
+                            ${index === 0 ? "bg-blue-500" : "bg-slate-400"}
+                          `}
+                          >
+                            {stage.orderIndex}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {stage.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {index === 0
+                                ? "Primeira etapa"
+                                : `Etapa ${stage.orderIndex}`}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <Input
+                              type="date"
+                              className="w-[150px] h-8 text-sm"
+                              value={
+                                stageDates[stage.orderIndex] ||
+                                (index === 0 ? formData.startDate : "")
+                              }
+                              onChange={(e) => {
+                                setStageDates((prev) => ({
+                                  ...prev,
+                                  [stage.orderIndex]: e.target.value,
+                                }));
+                              }}
+                              placeholder="Selecionar"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
               <DialogFooter>
                 <Button
                   variant="outline"
@@ -580,56 +685,202 @@ export default function Treatments() {
                 />
               </TabsContent>
               <TabsContent value="info" className="mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Paciente</p>
-                    <p className="font-medium">
-                      {getPatientById(selectedTreatment.patientId)?.name}
-                    </p>
+                <ScrollArea className="h-[60vh] pr-4">
+                  <div className="space-y-6">
+                    {/* Treatment Info Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Paciente
+                        </p>
+                        <p className="font-medium">
+                          {getPatientById(selectedTreatment.patientId)?.name}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Procedimento
+                        </p>
+                        <p className="font-medium">
+                          {getTemplateById(selectedTreatment.templateId)?.name}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Dentista
+                        </p>
+                        <p className="font-medium">
+                          {getUserById(selectedTreatment.dentistId)?.name}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Valor Total
+                        </p>
+                        <p className="font-medium">
+                          {formatCurrency(selectedTreatment.totalCost)}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Data de Início
+                        </p>
+                        <p className="font-medium">
+                          {formatDate(selectedTreatment.startDate)}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <Badge
+                          variant={
+                            statusConfig[selectedTreatment.status].variant
+                          }
+                        >
+                          {statusConfig[selectedTreatment.status].label}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {selectedTreatment.notes && (
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Observações
+                        </p>
+                        <p>{selectedTreatment.notes}</p>
+                      </div>
+                    )}
+
+                    {/* Attachments Section */}
+                    <Separator />
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Paperclip className="h-5 w-5 text-muted-foreground" />
+                        <h3 className="font-semibold text-lg">
+                          Anexos do Tratamento
+                        </h3>
+                        {treatmentAttachments.length > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            {treatmentAttachments.reduce(
+                              (acc, s) => acc + s.attachments.length,
+                              0
+                            )}{" "}
+                            arquivo(s)
+                          </Badge>
+                        )}
+                      </div>
+
+                      {treatmentAttachments.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-8 bg-muted/50 rounded-lg border-2 border-dashed">
+                          <FileText className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                          <p className="text-muted-foreground text-center">
+                            Nenhum anexo encontrado neste tratamento.
+                          </p>
+                          <p className="text-sm text-muted-foreground/70 text-center mt-1">
+                            Os anexos podem ser adicionados em cada etapa na
+                            Timeline.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {treatmentAttachments.map((stageData) => (
+                            <div
+                              key={stageData.stageIndex}
+                              className="bg-gradient-to-r from-muted/80 to-muted/40 rounded-lg border overflow-hidden"
+                            >
+                              {/* Stage Header */}
+                              <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/50">
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`
+                                    flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-medium
+                                    ${
+                                      stageData.status === "completed"
+                                        ? "bg-emerald-500"
+                                        : stageData.status === "in_progress"
+                                        ? "bg-blue-500"
+                                        : stageData.status === "skipped"
+                                        ? "bg-amber-500"
+                                        : "bg-slate-400"
+                                    }
+                                  `}
+                                  >
+                                    {stageData.status === "completed" ? (
+                                      <Check className="h-4 w-4" />
+                                    ) : stageData.status === "in_progress" ? (
+                                      <Play className="h-4 w-4" />
+                                    ) : stageData.status === "skipped" ? (
+                                      <SkipForward className="h-4 w-4" />
+                                    ) : (
+                                      <Clock className="h-4 w-4" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">
+                                      {stageData.stageName}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Etapa {stageData.stageIndex} •{" "}
+                                      {stageData.attachments.length} arquivo(s)
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Attachments List */}
+                              <div className="p-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {stageData.attachments.map(
+                                    (filename, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="flex items-center justify-between p-3 bg-background rounded-md border hover:shadow-sm transition-shadow"
+                                      >
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                          <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                                            <FileText className="h-5 w-5 text-primary" />
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <p
+                                              className="font-medium text-sm truncate"
+                                              title={filename}
+                                            >
+                                              {filename}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                              Anexado na etapa{" "}
+                                              {stageData.stageIndex}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="flex-shrink-0 ml-2 hover:bg-primary/10 hover:text-primary"
+                                          onClick={() => {
+                                            // In a real app, this would download the file
+                                            toast.info(
+                                              `Download: ${filename}`,
+                                              {
+                                                description:
+                                                  "Em uma aplicação real, o arquivo seria baixado aqui.",
+                                              }
+                                            );
+                                          }}
+                                        >
+                                          <Download className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Procedimento
-                    </p>
-                    <p className="font-medium">
-                      {getTemplateById(selectedTreatment.templateId)?.name}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Dentista</p>
-                    <p className="font-medium">
-                      {getUserById(selectedTreatment.dentistId)?.name}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Valor Total</p>
-                    <p className="font-medium">
-                      {formatCurrency(selectedTreatment.totalCost)}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Data de Início
-                    </p>
-                    <p className="font-medium">
-                      {formatDate(selectedTreatment.startDate)}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge
-                      variant={statusConfig[selectedTreatment.status].variant}
-                    >
-                      {statusConfig[selectedTreatment.status].label}
-                    </Badge>
-                  </div>
-                </div>
-                {selectedTreatment.notes && (
-                  <div className="mt-4 p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Observações</p>
-                    <p>{selectedTreatment.notes}</p>
-                  </div>
-                )}
+                </ScrollArea>
               </TabsContent>
             </Tabs>
           )}

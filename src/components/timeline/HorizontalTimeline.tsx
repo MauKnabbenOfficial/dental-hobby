@@ -133,6 +133,7 @@ export function HorizontalTimeline({
     notes: "",
     diagnosis: "",
     attachments: [] as string[],
+    scheduledDate: "",
   });
   const [attachmentToDelete, setAttachmentToDelete] = useState<{
     index: number;
@@ -342,6 +343,7 @@ export function HorizontalTimeline({
       notes: stage.notes || "",
       diagnosis: "",
       attachments: stage.attachments || [],
+      scheduledDate: stage.scheduledDate || "",
     });
     setIsEditing(true);
   };
@@ -352,6 +354,7 @@ export function HorizontalTimeline({
         status: editForm.status,
         notes: editForm.notes,
         attachments: editForm.attachments,
+        scheduledDate: editForm.scheduledDate || undefined,
       });
     }
     setIsEditing(false);
@@ -753,9 +756,20 @@ export function HorizontalTimeline({
                   <Label>Data Agendada</Label>
                   <Input
                     type="date"
-                    defaultValue={selectedStage.scheduledDate}
-                    disabled
+                    value={editForm.scheduledDate}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        scheduledDate: e.target.value,
+                      }))
+                    }
+                    disabled={editForm.status === "completed"}
                   />
+                  {editForm.status === "completed" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Etapas concluídas não podem ter a data alterada
+                    </p>
+                  )}
                 </div>
               </div>
 
