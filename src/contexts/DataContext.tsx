@@ -100,6 +100,9 @@ interface DataContextType {
   getTreatmentsByPatientId: (patientId: string) => Treatment[];
   getFinancialByTreatmentId: (treatmentId: string) => ExtendedFinancialRecord[];
   generateId: () => string;
+
+  // Reset data to initial mock values
+  resetAllData: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -339,6 +342,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const getFinancialByTreatmentId = (treatmentId: string) =>
     financialRecords.filter((f) => f.treatmentId === treatmentId);
 
+  // Reset all data to initial mock values
+  const resetAllData = () => {
+    setUsers(initialUsers);
+    setPatients(initialPatients);
+    setProcedureTemplates(initialProcedureTemplates);
+    setProcedureTemplateStages(initialProcedureTemplateStages);
+    setStageTemplates(initialStageTemplates);
+    setTreatments(initialTreatments);
+    setTreatmentStages(initialTreatmentStages);
+    setFinancialRecords(initialExtendedFinancialRecords);
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -383,6 +398,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         getTreatmentsByPatientId,
         getFinancialByTreatmentId,
         generateId,
+        resetAllData,
       }}
     >
       {children}

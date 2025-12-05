@@ -1,14 +1,52 @@
 import { useState } from "react";
-import { Plus, Search, Eye, Calendar, User, Stethoscope, Edit, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Eye,
+  Calendar,
+  User,
+  Stethoscope,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { HorizontalTimeline } from "@/components/timeline/HorizontalTimeline";
@@ -26,49 +64,81 @@ const statusConfig = {
 };
 
 export default function Treatments() {
-  const { 
-    treatments, addTreatment, updateTreatment, deleteTreatment,
-    patients, procedureTemplates, users,
-    treatmentStages, addTreatmentStage, updateTreatmentStage,
-    financialRecords, addFinancialRecord,
-    getPatientById, getTemplateById, getUserById, getStagesByTreatmentId, getStagesByTemplateId,
-    generateId
+  const {
+    treatments,
+    addTreatment,
+    updateTreatment,
+    deleteTreatment,
+    patients,
+    procedureTemplates,
+    users,
+    treatmentStages,
+    addTreatmentStage,
+    updateTreatmentStage,
+    financialRecords,
+    addFinancialRecord,
+    getPatientById,
+    getTemplateById,
+    getUserById,
+    getStagesByTreatmentId,
+    getStagesByTemplateId,
+    generateId,
   } = useData();
-  
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedTreatment, setSelectedTreatment] = useState<Treatment | null>(null);
+  const [selectedTreatment, setSelectedTreatment] = useState<Treatment | null>(
+    null
+  );
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingTreatment, setEditingTreatment] = useState<Treatment | null>(null);
+  const [editingTreatment, setEditingTreatment] = useState<Treatment | null>(
+    null
+  );
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    patientId: '',
-    templateId: '',
-    dentistId: '',
-    startDate: '',
+    patientId: "",
+    templateId: "",
+    dentistId: "",
+    startDate: "",
     totalCost: 0,
-    notes: '',
-    createFinancialRecord: false
+    notes: "",
+    createFinancialRecord: false,
   });
 
-  const filteredTreatments = treatments.filter(t => {
+  const filteredTreatments = treatments.filter((t) => {
     const patient = getPatientById(t.patientId);
     const template = getTemplateById(t.templateId);
-    const matchesSearch = patient?.name.toLowerCase().includes(search.toLowerCase()) ||
-                          template?.name.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch =
+      patient?.name.toLowerCase().includes(search.toLowerCase()) ||
+      template?.name.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const formatDate = (dateStr: string) => format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
-  const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  const formatDate = (dateStr: string) =>
+    format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
 
-  const dentists = users.filter(u => u.role === 'dentist' || u.role === 'admin');
+  const dentists = users.filter(
+    (u) => u.role === "dentist" || u.role === "admin"
+  );
 
   const resetForm = () => {
-    setFormData({ patientId: '', templateId: '', dentistId: '', startDate: '', totalCost: 0, notes: '', createFinancialRecord: false });
+    setFormData({
+      patientId: "",
+      templateId: "",
+      dentistId: "",
+      startDate: "",
+      totalCost: 0,
+      notes: "",
+      createFinancialRecord: false,
+    });
     setEditingTreatment(null);
   };
 
@@ -80,26 +150,32 @@ export default function Treatments() {
       dentistId: treatment.dentistId,
       startDate: treatment.startDate,
       totalCost: treatment.totalCost,
-      notes: treatment.notes || '',
-      createFinancialRecord: false
+      notes: treatment.notes || "",
+      createFinancialRecord: false,
     });
     setIsFormOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Validate totalCost
+    if (formData.totalCost <= 0 && !editingTreatment) {
+      toast.error("O valor total deve ser maior que zero!");
+      return;
+    }
+
     if (editingTreatment) {
       updateTreatment(editingTreatment.id, {
         ...formData,
-        status: editingTreatment.status
+        status: editingTreatment.status,
       });
-      toast.success('Atendimento atualizado!');
+      toast.success("Atendimento atualizado!");
     } else {
       const treatmentId = generateId();
       const template = getTemplateById(formData.templateId);
       const templateStages = getStagesByTemplateId(formData.templateId);
-      
+
       // Create treatment
       addTreatment({
         id: treatmentId,
@@ -109,41 +185,43 @@ export default function Treatments() {
         startDate: formData.startDate,
         totalCost: formData.totalCost || template?.baseCost || 0,
         notes: formData.notes,
-        status: 'scheduled',
-        currentStageId: ''
+        status: "scheduled",
+        currentStageId: "",
       });
-      
+
       // Copy stages from template
       templateStages.forEach((stage, index) => {
         addTreatmentStage({
           id: generateId(),
           treatmentId,
           name: stage.name,
-          status: index === 0 ? 'in_progress' : 'pending',
+          status: index === 0 ? "in_progress" : "pending",
           orderIndex: stage.orderIndex,
           scheduledDate: formData.startDate,
-          notes: ''
+          notes: "",
         });
       });
-      
+
       // Create financial record if requested
       if (formData.createFinancialRecord && template) {
         const record: ExtendedFinancialRecord = {
           id: generateId(),
           treatmentId,
-          type: 'income',
+          type: "income",
           amount: formData.totalCost || template.baseCost,
           date: formData.startDate,
-          description: `${template.name} - ${getPatientById(formData.patientId)?.name}`,
+          description: `${template.name} - ${
+            getPatientById(formData.patientId)?.name
+          }`,
           category: template.category,
-          status: 'pending'
+          status: "pending",
         };
         addFinancialRecord(record);
       }
-      
-      toast.success('Atendimento criado!');
+
+      toast.success("Atendimento criado!");
     }
-    
+
     setIsFormOpen(false);
     resetForm();
   };
@@ -151,14 +229,17 @@ export default function Treatments() {
   const handleDelete = () => {
     if (deleteId) {
       deleteTreatment(deleteId);
-      toast.success('Atendimento excluído!');
+      toast.success("Atendimento excluído!");
       setDeleteId(null);
     }
   };
 
-  const handleStageUpdate = (stageId: string, data: Partial<typeof treatmentStages[0]>) => {
+  const handleStageUpdate = (
+    stageId: string,
+    data: Partial<(typeof treatmentStages)[0]>
+  ) => {
     updateTreatmentStage(stageId, data);
-    toast.success('Etapa atualizada!');
+    toast.success("Etapa atualizada!");
   };
 
   return (
@@ -166,9 +247,17 @@ export default function Treatments() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Atendimentos</h1>
-          <p className="text-muted-foreground">Tratamentos ativos e histórico de pacientes</p>
+          <p className="text-muted-foreground">
+            Tratamentos ativos e histórico de pacientes
+          </p>
         </div>
-        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) resetForm(); }}>
+        <Dialog
+          open={isFormOpen}
+          onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -177,32 +266,41 @@ export default function Treatments() {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>{editingTreatment ? 'Editar' : 'Iniciar Novo'} Atendimento</DialogTitle>
+              <DialogTitle>
+                {editingTreatment ? "Editar" : "Iniciar Novo"} Atendimento
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>Paciente</Label>
-                <Select value={formData.patientId} onValueChange={(value) => setFormData(prev => ({ ...prev, patientId: value }))}>
+                <Select
+                  value={formData.patientId}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, patientId: value }))
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o paciente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {patients.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    {patients.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Procedimento</Label>
-                <Select 
-                  value={formData.templateId} 
+                <Select
+                  value={formData.templateId}
                   onValueChange={(value) => {
                     const template = getTemplateById(value);
-                    setFormData(prev => ({ 
-                      ...prev, 
+                    setFormData((prev) => ({
+                      ...prev,
                       templateId: value,
-                      totalCost: template?.baseCost || 0
+                      totalCost: template?.baseCost || 0,
                     }));
                   }}
                 >
@@ -210,7 +308,7 @@ export default function Treatments() {
                     <SelectValue placeholder="Selecione o modelo de procedimento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {procedureTemplates.map(t => (
+                    {procedureTemplates.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
                         {t.name} - {formatCurrency(t.baseCost)}
                       </SelectItem>
@@ -220,13 +318,20 @@ export default function Treatments() {
               </div>
               <div>
                 <Label>Dentista Responsável</Label>
-                <Select value={formData.dentistId} onValueChange={(value) => setFormData(prev => ({ ...prev, dentistId: value }))}>
+                <Select
+                  value={formData.dentistId}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, dentistId: value }))
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o dentista" />
                   </SelectTrigger>
                   <SelectContent>
-                    {dentists.map(d => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    {dentists.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -234,37 +339,82 @@ export default function Treatments() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Data de Início</Label>
-                  <Input 
-                    type="date" 
+                  <Input
+                    type="date"
                     value={formData.startDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        startDate: e.target.value,
+                      }))
+                    }
                     required
                   />
                 </div>
                 <div>
                   <Label>Valor Total (R$)</Label>
-                  <Input 
-                    type="number" 
-                    value={formData.totalCost}
-                    onChange={(e) => setFormData(prev => ({ ...prev, totalCost: Number(e.target.value) }))}
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.totalCost || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty, numbers, and decimal point
+                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                        const numValue = value === "" ? 0 : parseFloat(value);
+                        setFormData((prev) => ({
+                          ...prev,
+                          totalCost: isNaN(numValue) ? 0 : numValue,
+                        }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Ensure value is positive on blur
+                      const value = parseFloat(e.target.value) || 0;
+                      if (value < 0) {
+                        setFormData((prev) => ({ ...prev, totalCost: 0 }));
+                      }
+                    }}
                   />
+                  {formData.totalCost <= 0 && formData.templateId && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Valor deve ser maior que zero
+                    </p>
+                  )}
                 </div>
               </div>
               {!editingTreatment && (
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="createFinancial" 
+                  <Checkbox
+                    id="createFinancial"
                     checked={formData.createFinancialRecord}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, createFinancialRecord: !!checked }))}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        createFinancialRecord: !!checked,
+                      }))
+                    }
                   />
-                  <label htmlFor="createFinancial" className="text-sm font-medium leading-none cursor-pointer">
+                  <label
+                    htmlFor="createFinancial"
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
                     Gerar lançamento financeiro (Conta a Receber)
                   </label>
                 </div>
               )}
               <DialogFooter>
-                <Button variant="outline" type="button" onClick={() => setIsFormOpen(false)}>Cancelar</Button>
-                <Button type="submit">{editingTreatment ? 'Salvar' : 'Iniciar'}</Button>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setIsFormOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {editingTreatment ? "Salvar" : "Iniciar"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -303,7 +453,9 @@ export default function Treatments() {
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Lista de Atendimentos ({filteredTreatments.length})</CardTitle>
+          <CardTitle className="text-lg">
+            Lista de Atendimentos ({filteredTreatments.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -324,7 +476,9 @@ export default function Treatments() {
                 const template = getTemplateById(treatment.templateId);
                 const dentist = getUserById(treatment.dentistId);
                 const stages = getStagesByTreatmentId(treatment.id);
-                const completedStages = stages.filter(s => s.status === 'completed').length;
+                const completedStages = stages.filter(
+                  (s) => s.status === "completed"
+                ).length;
 
                 return (
                   <TableRow key={treatment.id}>
@@ -345,7 +499,9 @@ export default function Treatments() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                        <span>{dentist?.name.split(' ').slice(0, 2).join(' ')}</span>
+                        <span>
+                          {dentist?.name.split(" ").slice(0, 2).join(" ")}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -354,7 +510,9 @@ export default function Treatments() {
                         {formatDate(treatment.startDate)}
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">{formatCurrency(treatment.totalCost)}</TableCell>
+                    <TableCell className="font-medium">
+                      {formatCurrency(treatment.totalCost)}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={statusConfig[treatment.status].variant}>
                         {statusConfig[treatment.status].label}
@@ -362,13 +520,26 @@ export default function Treatments() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedTreatment(treatment)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setSelectedTreatment(treatment)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(treatment)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(treatment)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(treatment.id)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => setDeleteId(treatment.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -382,7 +553,10 @@ export default function Treatments() {
       </Card>
 
       {/* Treatment Detail Dialog with Timeline */}
-      <Dialog open={!!selectedTreatment} onOpenChange={() => setSelectedTreatment(null)}>
+      <Dialog
+        open={!!selectedTreatment}
+        onOpenChange={() => setSelectedTreatment(null)}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Atendimento</DialogTitle>
@@ -396,8 +570,12 @@ export default function Treatments() {
               <TabsContent value="timeline" className="mt-4">
                 <HorizontalTimeline
                   stages={getStagesByTreatmentId(selectedTreatment.id)}
-                  patientName={getPatientById(selectedTreatment.patientId)?.name || ''}
-                  treatmentName={getTemplateById(selectedTreatment.templateId)?.name || ''}
+                  patientName={
+                    getPatientById(selectedTreatment.patientId)?.name || ""
+                  }
+                  treatmentName={
+                    getTemplateById(selectedTreatment.templateId)?.name || ""
+                  }
                   onStageUpdate={handleStageUpdate}
                 />
               </TabsContent>
@@ -405,27 +583,43 @@ export default function Treatments() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Paciente</p>
-                    <p className="font-medium">{getPatientById(selectedTreatment.patientId)?.name}</p>
+                    <p className="font-medium">
+                      {getPatientById(selectedTreatment.patientId)?.name}
+                    </p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Procedimento</p>
-                    <p className="font-medium">{getTemplateById(selectedTreatment.templateId)?.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Procedimento
+                    </p>
+                    <p className="font-medium">
+                      {getTemplateById(selectedTreatment.templateId)?.name}
+                    </p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Dentista</p>
-                    <p className="font-medium">{getUserById(selectedTreatment.dentistId)?.name}</p>
+                    <p className="font-medium">
+                      {getUserById(selectedTreatment.dentistId)?.name}
+                    </p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Valor Total</p>
-                    <p className="font-medium">{formatCurrency(selectedTreatment.totalCost)}</p>
+                    <p className="font-medium">
+                      {formatCurrency(selectedTreatment.totalCost)}
+                    </p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Data de Início</p>
-                    <p className="font-medium">{formatDate(selectedTreatment.startDate)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Data de Início
+                    </p>
+                    <p className="font-medium">
+                      {formatDate(selectedTreatment.startDate)}
+                    </p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge variant={statusConfig[selectedTreatment.status].variant}>
+                    <Badge
+                      variant={statusConfig[selectedTreatment.status].variant}
+                    >
                       {statusConfig[selectedTreatment.status].label}
                     </Badge>
                   </div>
@@ -448,12 +642,16 @@ export default function Treatments() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este atendimento? As etapas e dados associados também serão removidos.
+              Tem certeza que deseja excluir este atendimento? As etapas e dados
+              associados também serão removidos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

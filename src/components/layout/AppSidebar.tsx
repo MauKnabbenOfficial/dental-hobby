@@ -43,7 +43,7 @@ export function AppSidebar() {
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-lg bg-sidebar-primary flex items-center justify-center overflow-hidden">
               <img
-                src="/public/images/dental-track-dente.png"
+                src="/images/dental-track-dente.png"
                 alt="Logo"
                 className="h-10 w-10 object-contain"
               />
