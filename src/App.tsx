@@ -29,55 +29,76 @@ const App = () => (
           <DataProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/pacientes" element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Patients />
-                  </MainLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/procedimentos" element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <ProcedureTemplates />
-                  </MainLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/atendimentos" element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Treatments />
-                  </MainLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/equipe" element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Team />
-                  </MainLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/financeiro" element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Financial />
-                  </MainLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/etapas" element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <StageTemplates />
-                  </MainLayout>
-                </ProtectedRoute>
-              } />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Dashboard />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/pacientes"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Patients />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/modelos-procedimentos"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <ProcedureTemplates />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/atendimentos"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Treatments />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/equipe"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Team />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/financeiro"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Financial />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/etapas"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <StageTemplates />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </DataProvider>

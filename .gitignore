@@ -7,6 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Lock files (using npm only)
+bun.lockb
+
 node_modules
 dist
 dist-ssr
