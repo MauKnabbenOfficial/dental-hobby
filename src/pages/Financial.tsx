@@ -226,12 +226,12 @@ export default function Financial() {
               </div>
               <div>
                 <Label>Atendimento Vinculado (opcional)</Label>
-                <Select value={formData.treatmentId} onValueChange={(value) => setFormData(prev => ({ ...prev, treatmentId: value }))}>
+                <Select value={formData.treatmentId || "none"} onValueChange={(value) => setFormData(prev => ({ ...prev, treatmentId: value === "none" ? "" : value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um atendimento" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {treatments.map(t => {
                       const patient = getPatientById(t.patientId);
                       const template = getTemplateById(t.templateId);

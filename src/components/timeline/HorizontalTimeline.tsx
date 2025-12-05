@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Check, Clock, Circle, FileText, Calendar, Upload, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Clock, Circle, FileText, Calendar, Upload, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -61,13 +62,14 @@ export function HorizontalTimeline({ stages, patientName, treatmentName, onStage
     diagnosis: '',
     attachments: [] as string[]
   });
+  const [attachmentToDelete, setAttachmentToDelete] = useState<{ index: number; name: string } | null>(null);
 
   // Scroll to current stage on mount
   useEffect(() => {
     if (scrollRef.current && stages.length > 0) {
       const currentStageIndex = stages.findIndex(s => s.status === 'in_progress');
       if (currentStageIndex > 0) {
-        const stageWidth = 288; // 256px card + 32px gap
+        const stageWidth = 288;
         const scrollPosition = (currentStageIndex * stageWidth) - (scrollRef.current.clientWidth / 2) + (stageWidth / 2);
         scrollRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
       }
@@ -123,6 +125,16 @@ export function HorizontalTimeline({ stages, patientName, treatmentName, onStage
     }
   };
 
+  const confirmDeleteAttachment = () => {
+    if (attachmentToDelete !== null) {
+      setEditForm(prev => ({
+        ...prev,
+        attachments: prev.attachments.filter((_, i) => i !== attachmentToDelete.index)
+      }));
+      setAttachmentToDelete(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -142,33 +154,39 @@ export function HorizontalTimeline({ stages, patientName, treatmentName, onStage
         </div>
       </CardHeader>
       <CardContent>
-        {/* Timeline Track */}
+        {/* Timeline Track - Container with sticky buttons */}
         <div className="relative">
           {/* Connection Line */}
-          <div className="absolute top-8 left-0 right-0 h-0.5 bg-border" />
+          <div className="absolute top-8 left-12 right-12 h-0.5 bg-border z-0" />
           
-          {/* Floating Navigation Buttons */}
-          <Button 
-            variant="secondary" 
-            size="icon" 
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 shadow-lg opacity-80 hover:opacity-100"
-            onClick={() => scroll("left")}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Button 
-            variant="secondary" 
-            size="icon" 
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 shadow-lg opacity-80 hover:opacity-100"
-            onClick={() => scroll("right")}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
+          {/* Left Navigation Button - Sticky */}
+          <div className="absolute left-0 top-0 bottom-0 z-30 flex items-center pointer-events-none">
+            <Button 
+              variant="secondary" 
+              size="icon" 
+              className="shadow-lg pointer-events-auto bg-background/95 backdrop-blur-sm hover:bg-background"
+              onClick={() => scroll("left")}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          {/* Right Navigation Button - Sticky */}
+          <div className="absolute right-0 top-0 bottom-0 z-30 flex items-center pointer-events-none">
+            <Button 
+              variant="secondary" 
+              size="icon" 
+              className="shadow-lg pointer-events-auto bg-background/95 backdrop-blur-sm hover:bg-background"
+              onClick={() => scroll("right")}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
           
           {/* Scrollable Container */}
           <div 
             ref={scrollRef}
-            className="overflow-x-auto pb-4 timeline-scroll px-10"
+            className="overflow-x-auto pb-4 timeline-scroll mx-10"
           >
             <div className="flex gap-4 min-w-max px-2 pt-2">
               {stages.map((stage, index) => {
@@ -305,9 +323,16 @@ export function HorizontalTimeline({ stages, patientName, treatmentName, onStage
                 {editForm.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {editForm.attachments.map((file, idx) => (
-                      <Badge key={idx} variant="secondary" className="gap-1">
+                      <Badge key={idx} variant="secondary" className="gap-1 pr-1">
                         <FileText className="h-3 w-3" />
                         {file}
+                        <button 
+                          type="button"
+                          onClick={() => setAttachmentToDelete({ index: idx, name: file })}
+                          className="ml-1 p-0.5 rounded hover:bg-destructive/20 text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </Badge>
                     ))}
                   </div>
@@ -325,6 +350,24 @@ export function HorizontalTimeline({ stages, patientName, treatmentName, onStage
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Attachment Delete Confirmation */}
+      <AlertDialog open={!!attachmentToDelete} onOpenChange={() => setAttachmentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão de Anexo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o anexo <strong>"{attachmentToDelete?.name}"</strong> do paciente <strong>{patientName}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteAttachment} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
