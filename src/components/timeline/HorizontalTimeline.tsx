@@ -1,9 +1,13 @@
-import { useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, Clock, Circle, FileText, Calendar } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Check, Clock, Circle, FileText, Calendar, Upload, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { TreatmentStage } from "@/data/mockData";
 import { format } from "date-fns";
@@ -13,6 +17,7 @@ interface HorizontalTimelineProps {
   stages: TreatmentStage[];
   patientName: string;
   treatmentName: string;
+  onStageUpdate?: (stageId: string, data: Partial<TreatmentStage>) => void;
 }
 
 const statusConfig = {
@@ -46,9 +51,28 @@ const statusConfig = {
   }
 };
 
-export function HorizontalTimeline({ stages, patientName, treatmentName }: HorizontalTimelineProps) {
+export function HorizontalTimeline({ stages, patientName, treatmentName, onStageUpdate }: HorizontalTimelineProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedStage, setSelectedStage] = useState<TreatmentStage | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    status: '' as TreatmentStage['status'],
+    notes: '',
+    diagnosis: '',
+    attachments: [] as string[]
+  });
+
+  // Scroll to current stage on mount
+  useEffect(() => {
+    if (scrollRef.current && stages.length > 0) {
+      const currentStageIndex = stages.findIndex(s => s.status === 'in_progress');
+      if (currentStageIndex > 0) {
+        const stageWidth = 288; // 256px card + 32px gap
+        const scrollPosition = (currentStageIndex * stageWidth) - (scrollRef.current.clientWidth / 2) + (stageWidth / 2);
+        scrollRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
+      }
+    }
+  }, [stages]);
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
@@ -63,6 +87,40 @@ export function HorizontalTimeline({ stages, patientName, treatmentName }: Horiz
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "—";
     return format(new Date(dateStr), "dd MMM yyyy", { locale: ptBR });
+  };
+
+  const openEditDialog = (stage: TreatmentStage) => {
+    setSelectedStage(stage);
+    setEditForm({
+      status: stage.status,
+      notes: stage.notes || '',
+      diagnosis: '',
+      attachments: stage.attachments || []
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    if (selectedStage && onStageUpdate) {
+      onStageUpdate(selectedStage.id, {
+        status: editForm.status,
+        notes: editForm.notes,
+        attachments: editForm.attachments
+      });
+    }
+    setIsEditing(false);
+    setSelectedStage(null);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newAttachments = Array.from(files).map(f => f.name);
+      setEditForm(prev => ({
+        ...prev,
+        attachments: [...prev.attachments, ...newAttachments]
+      }));
+    }
   };
 
   return (
@@ -89,25 +147,45 @@ export function HorizontalTimeline({ stages, patientName, treatmentName }: Horiz
           {/* Connection Line */}
           <div className="absolute top-8 left-0 right-0 h-0.5 bg-border" />
           
+          {/* Floating Navigation Buttons */}
+          <Button 
+            variant="secondary" 
+            size="icon" 
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 shadow-lg opacity-80 hover:opacity-100"
+            onClick={() => scroll("left")}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant="secondary" 
+            size="icon" 
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 shadow-lg opacity-80 hover:opacity-100"
+            onClick={() => scroll("right")}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+          
           {/* Scrollable Container */}
           <div 
             ref={scrollRef}
-            className="overflow-x-auto pb-4 timeline-scroll"
+            className="overflow-x-auto pb-4 timeline-scroll px-10"
           >
             <div className="flex gap-4 min-w-max px-2 pt-2">
               {stages.map((stage, index) => {
                 const config = statusConfig[stage.status];
                 const StatusIcon = config.icon;
                 const isLast = index === stages.length - 1;
+                const isCurrent = stage.status === 'in_progress';
                 
                 return (
                   <div key={stage.id} className="relative flex flex-col items-center">
                     {/* Node */}
                     <button
-                      onClick={() => setSelectedStage(stage)}
+                      onClick={() => openEditDialog(stage)}
                       className={cn(
-                        "relative z-10 w-16 h-16 rounded-full border-4 flex items-center justify-center transition-transform hover:scale-110 bg-card",
-                        config.borderColor
+                        "relative z-10 w-16 h-16 rounded-full border-4 flex items-center justify-center transition-all hover:scale-110 bg-card",
+                        config.borderColor,
+                        isCurrent && "ring-4 ring-primary/30 animate-pulse"
                       )}
                     >
                       <StatusIcon className={cn("h-6 w-6", config.textColor)} />
@@ -115,10 +193,10 @@ export function HorizontalTimeline({ stages, patientName, treatmentName }: Horiz
                     
                     {/* Stage Card */}
                     <div
-                      onClick={() => setSelectedStage(stage)}
+                      onClick={() => openEditDialog(stage)}
                       className={cn(
                         "mt-4 w-64 p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md",
-                        stage.status === "in_progress" && "border-primary bg-primary/5",
+                        stage.status === "in_progress" && "border-primary bg-primary/5 ring-2 ring-primary/20",
                         stage.status === "completed" && "border-success/30 bg-success/5",
                         stage.status === "pending" && "bg-card hover:bg-muted/50"
                       )}
@@ -142,6 +220,9 @@ export function HorizontalTimeline({ stages, patientName, treatmentName }: Horiz
                           <span>Concluído: {formatDate(stage.dateCompleted)}</span>
                         </div>
                       )}
+                      {stage.notes && (
+                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{stage.notes}</p>
+                      )}
                     </div>
                     
                     {/* Connector Arrow */}
@@ -156,59 +237,90 @@ export function HorizontalTimeline({ stages, patientName, treatmentName }: Horiz
         </div>
       </CardContent>
 
-      {/* Stage Detail Dialog */}
-      <Dialog open={!!selectedStage} onOpenChange={() => setSelectedStage(null)}>
-        <DialogContent className="max-w-md">
+      {/* Stage Edit Dialog */}
+      <Dialog open={isEditing} onOpenChange={() => setIsEditing(false)}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              {selectedStage?.name}
+              Editar Etapa: {selectedStage?.name}
             </DialogTitle>
           </DialogHeader>
           {selectedStage && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Badge variant={selectedStage.status === "completed" ? "default" : selectedStage.status === "in_progress" ? "secondary" : "outline"}>
-                  {statusConfig[selectedStage.status].label}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  Etapa {selectedStage.orderIndex} de {stages.length}
-                </span>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Etapa {selectedStage.orderIndex} de {stages.length}</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-muted-foreground">Agendado para</p>
-                  <p className="font-medium">{formatDate(selectedStage.scheduledDate)}</p>
+                  <Label>Status</Label>
+                  <Select value={editForm.status} onValueChange={(value: TreatmentStage['status']) => setEditForm(prev => ({ ...prev, status: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="in_progress">Em Andamento</SelectItem>
+                      <SelectItem value="completed">Concluído</SelectItem>
+                      <SelectItem value="skipped">Pulado</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                {selectedStage.dateCompleted && (
-                  <div>
-                    <p className="text-muted-foreground">Concluído em</p>
-                    <p className="font-medium text-success">{formatDate(selectedStage.dateCompleted)}</p>
+                <div>
+                  <Label>Data Agendada</Label>
+                  <Input type="date" defaultValue={selectedStage.scheduledDate} disabled />
+                </div>
+              </div>
+              
+              <div>
+                <Label>Observações</Label>
+                <Textarea 
+                  placeholder="Adicione observações sobre esta etapa..." 
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+              
+              <div>
+                <Label>Diagnóstico</Label>
+                <Textarea 
+                  placeholder="Diagnóstico ou achados clínicos..." 
+                  value={editForm.diagnosis}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, diagnosis: e.target.value }))}
+                  rows={2}
+                />
+              </div>
+              
+              <div>
+                <Label>Anexos</Label>
+                <div className="mt-2">
+                  <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Clique para adicionar arquivos</span>
+                    <input type="file" multiple className="hidden" onChange={handleFileChange} />
+                  </label>
+                </div>
+                {editForm.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {editForm.attachments.map((file, idx) => (
+                      <Badge key={idx} variant="secondary" className="gap-1">
+                        <FileText className="h-3 w-3" />
+                        {file}
+                      </Badge>
+                    ))}
                   </div>
                 )}
               </div>
               
-              {selectedStage.notes && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Observações</p>
-                  <p className="text-sm bg-muted p-3 rounded-lg">{selectedStage.notes}</p>
-                </div>
-              )}
-              
-              {selectedStage.attachments && selectedStage.attachments.length > 0 && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Anexos</p>
-                  <div className="space-y-2">
-                    {selectedStage.attachments.map((attachment, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <span className="text-sm">{attachment}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                <Button onClick={handleSave}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>

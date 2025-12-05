@@ -1,18 +1,22 @@
 import { useState } from "react";
-import { Plus, Search, Eye, Calendar, User, Stethoscope } from "lucide-react";
+import { Plus, Search, Eye, Calendar, User, Stethoscope, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { HorizontalTimeline } from "@/components/timeline/HorizontalTimeline";
-import { treatments, patients, procedureTemplates, users, getPatientById, getTemplateById, getUserById, getStagesByTreatmentId, Treatment } from "@/data/mockData";
+import { useData, ExtendedFinancialRecord } from "@/contexts/DataContext";
+import { Treatment } from "@/data/mockData";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 const statusConfig = {
   scheduled: { label: "Agendado", variant: "outline" as const },
@@ -22,10 +26,32 @@ const statusConfig = {
 };
 
 export default function Treatments() {
+  const { 
+    treatments, addTreatment, updateTreatment, deleteTreatment,
+    patients, procedureTemplates, users,
+    treatmentStages, addTreatmentStage, updateTreatmentStage,
+    financialRecords, addFinancialRecord,
+    getPatientById, getTemplateById, getUserById, getStagesByTreatmentId, getStagesByTemplateId,
+    generateId
+  } = useData();
+  
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTreatment, setSelectedTreatment] = useState<Treatment | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTreatment, setEditingTreatment] = useState<Treatment | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    patientId: '',
+    templateId: '',
+    dentistId: '',
+    startDate: '',
+    totalCost: 0,
+    notes: '',
+    createFinancialRecord: false
+  });
 
   const filteredTreatments = treatments.filter(t => {
     const patient = getPatientById(t.patientId);
@@ -41,6 +67,100 @@ export default function Treatments() {
 
   const dentists = users.filter(u => u.role === 'dentist' || u.role === 'admin');
 
+  const resetForm = () => {
+    setFormData({ patientId: '', templateId: '', dentistId: '', startDate: '', totalCost: 0, notes: '', createFinancialRecord: false });
+    setEditingTreatment(null);
+  };
+
+  const openEditDialog = (treatment: Treatment) => {
+    setEditingTreatment(treatment);
+    setFormData({
+      patientId: treatment.patientId,
+      templateId: treatment.templateId,
+      dentistId: treatment.dentistId,
+      startDate: treatment.startDate,
+      totalCost: treatment.totalCost,
+      notes: treatment.notes || '',
+      createFinancialRecord: false
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editingTreatment) {
+      updateTreatment(editingTreatment.id, {
+        ...formData,
+        status: editingTreatment.status
+      });
+      toast.success('Atendimento atualizado!');
+    } else {
+      const treatmentId = generateId();
+      const template = getTemplateById(formData.templateId);
+      const templateStages = getStagesByTemplateId(formData.templateId);
+      
+      // Create treatment
+      addTreatment({
+        id: treatmentId,
+        patientId: formData.patientId,
+        templateId: formData.templateId,
+        dentistId: formData.dentistId,
+        startDate: formData.startDate,
+        totalCost: formData.totalCost || template?.baseCost || 0,
+        notes: formData.notes,
+        status: 'scheduled',
+        currentStageId: ''
+      });
+      
+      // Copy stages from template
+      templateStages.forEach((stage, index) => {
+        addTreatmentStage({
+          id: generateId(),
+          treatmentId,
+          name: stage.name,
+          status: index === 0 ? 'in_progress' : 'pending',
+          orderIndex: stage.orderIndex,
+          scheduledDate: formData.startDate,
+          notes: ''
+        });
+      });
+      
+      // Create financial record if requested
+      if (formData.createFinancialRecord && template) {
+        const record: ExtendedFinancialRecord = {
+          id: generateId(),
+          treatmentId,
+          type: 'income',
+          amount: formData.totalCost || template.baseCost,
+          date: formData.startDate,
+          description: `${template.name} - ${getPatientById(formData.patientId)?.name}`,
+          category: template.category,
+          status: 'pending'
+        };
+        addFinancialRecord(record);
+      }
+      
+      toast.success('Atendimento criado!');
+    }
+    
+    setIsFormOpen(false);
+    resetForm();
+  };
+
+  const handleDelete = () => {
+    if (deleteId) {
+      deleteTreatment(deleteId);
+      toast.success('Atendimento excluído!');
+      setDeleteId(null);
+    }
+  };
+
+  const handleStageUpdate = (stageId: string, data: Partial<typeof treatmentStages[0]>) => {
+    updateTreatmentStage(stageId, data);
+    toast.success('Etapa atualizada!');
+  };
+
   return (
     <div className="space-y-6 animate-slide-in">
       <div className="flex items-center justify-between">
@@ -48,7 +168,7 @@ export default function Treatments() {
           <h1 className="text-2xl font-bold text-foreground">Atendimentos</h1>
           <p className="text-muted-foreground">Tratamentos ativos e histórico de pacientes</p>
         </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -57,12 +177,12 @@ export default function Treatments() {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Iniciar Novo Atendimento</DialogTitle>
+              <DialogTitle>{editingTreatment ? 'Editar' : 'Iniciar Novo'} Atendimento</DialogTitle>
             </DialogHeader>
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>Paciente</Label>
-                <Select>
+                <Select value={formData.patientId} onValueChange={(value) => setFormData(prev => ({ ...prev, patientId: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o paciente" />
                   </SelectTrigger>
@@ -75,7 +195,17 @@ export default function Treatments() {
               </div>
               <div>
                 <Label>Procedimento</Label>
-                <Select>
+                <Select 
+                  value={formData.templateId} 
+                  onValueChange={(value) => {
+                    const template = getTemplateById(value);
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      templateId: value,
+                      totalCost: template?.baseCost || 0
+                    }));
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o modelo de procedimento" />
                   </SelectTrigger>
@@ -90,7 +220,7 @@ export default function Treatments() {
               </div>
               <div>
                 <Label>Dentista Responsável</Label>
-                <Select>
+                <Select value={formData.dentistId} onValueChange={(value) => setFormData(prev => ({ ...prev, dentistId: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o dentista" />
                   </SelectTrigger>
@@ -101,14 +231,41 @@ export default function Treatments() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Data de Início</Label>
-                <Input type="date" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data de Início</Label>
+                  <Input 
+                    type="date" 
+                    value={formData.startDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Valor Total (R$)</Label>
+                  <Input 
+                    type="number" 
+                    value={formData.totalCost}
+                    onChange={(e) => setFormData(prev => ({ ...prev, totalCost: Number(e.target.value) }))}
+                  />
+                </div>
               </div>
-              <div className="flex justify-end gap-2 mt-4">
+              {!editingTreatment && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="createFinancial" 
+                    checked={formData.createFinancialRecord}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, createFinancialRecord: !!checked }))}
+                  />
+                  <label htmlFor="createFinancial" className="text-sm font-medium leading-none cursor-pointer">
+                    Gerar lançamento financeiro (Conta a Receber)
+                  </label>
+                </div>
+              )}
+              <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setIsFormOpen(false)}>Cancelar</Button>
-                <Button type="submit">Iniciar Atendimento</Button>
-              </div>
+                <Button type="submit">{editingTreatment ? 'Salvar' : 'Iniciar'}</Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -204,9 +361,17 @@ export default function Treatments() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => setSelectedTreatment(treatment)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedTreatment(treatment)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(treatment)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(treatment.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -233,6 +398,7 @@ export default function Treatments() {
                   stages={getStagesByTreatmentId(selectedTreatment.id)}
                   patientName={getPatientById(selectedTreatment.patientId)?.name || ''}
                   treatmentName={getTemplateById(selectedTreatment.templateId)?.name || ''}
+                  onStageUpdate={handleStageUpdate}
                 />
               </TabsContent>
               <TabsContent value="info" className="mt-4">
@@ -275,6 +441,24 @@ export default function Treatments() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este atendimento? As etapas e dados associados também serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

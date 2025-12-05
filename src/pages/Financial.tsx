@@ -1,25 +1,59 @@
 import { useState } from "react";
-import { Search, TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight, Filter } from "lucide-react";
+import { Plus, Search, TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight, Edit, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { financialRecords, treatments, getPatientById, getTemplateById } from "@/data/mockData";
+import { Textarea } from "@/components/ui/textarea";
+import { useData, ExtendedFinancialRecord } from "@/contexts/DataContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
+const paymentStatusConfig = {
+  pending: { label: "Pendente", color: "bg-warning/10 text-warning" },
+  paid: { label: "Pago", color: "bg-success/10 text-success" },
+  cancelled: { label: "Cancelado", color: "bg-destructive/10 text-destructive" },
+};
+
 export default function Financial() {
+  const { 
+    financialRecords, addFinancialRecord, updateFinancialRecord, deleteFinancialRecord,
+    treatments, getPatientById, getTemplateById, generateId 
+  } = useData();
+  
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<ExtendedFinancialRecord | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    treatmentId: '',
+    type: 'income' as 'income' | 'expense',
+    amount: 0,
+    date: '',
+    paymentDate: '',
+    description: '',
+    category: '',
+    status: 'pending' as 'pending' | 'paid' | 'cancelled'
+  });
 
   const filteredRecords = financialRecords.filter(r => {
     const matchesSearch = r.description.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === "all" || r.type === typeFilter;
     const matchesCategory = categoryFilter === "all" || r.category === categoryFilter;
-    return matchesSearch && matchesType && matchesCategory;
+    const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+    return matchesSearch && matchesType && matchesCategory && matchesStatus;
   });
 
   const formatDate = (dateStr: string) => format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
@@ -28,6 +62,7 @@ export default function Financial() {
   const totalIncome = financialRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
   const totalExpense = financialRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
   const balance = totalIncome - totalExpense;
+  const pendingAmount = financialRecords.filter(r => r.status === 'pending').reduce((sum, r) => sum + r.amount, 0);
 
   const categories = [...new Set(financialRecords.map(r => r.category))];
 
@@ -49,15 +84,177 @@ export default function Financial() {
     { month: 'Dez', receita: 4180, despesa: 570 },
   ];
 
+  const resetForm = () => {
+    setFormData({ treatmentId: '', type: 'income', amount: 0, date: '', paymentDate: '', description: '', category: '', status: 'pending' });
+    setEditingRecord(null);
+  };
+
+  const openEditDialog = (record: ExtendedFinancialRecord) => {
+    setEditingRecord(record);
+    setFormData({
+      treatmentId: record.treatmentId,
+      type: record.type,
+      amount: record.amount,
+      date: record.date,
+      paymentDate: record.paymentDate || '',
+      description: record.description,
+      category: record.category,
+      status: record.status
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editingRecord) {
+      updateFinancialRecord(editingRecord.id, formData);
+      toast.success('Lançamento atualizado!');
+    } else {
+      addFinancialRecord({
+        id: generateId(),
+        ...formData
+      });
+      toast.success('Lançamento criado!');
+    }
+    
+    setIsFormOpen(false);
+    resetForm();
+  };
+
+  const handleDelete = () => {
+    if (deleteId) {
+      deleteFinancialRecord(deleteId);
+      toast.success('Lançamento excluído!');
+      setDeleteId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-slide-in">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Financeiro</h1>
-        <p className="text-muted-foreground">Controle de receitas e despesas</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Financeiro</h1>
+          <p className="text-muted-foreground">Controle de receitas e despesas</p>
+        </div>
+        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) resetForm(); }}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Lançamento
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingRecord ? 'Editar' : 'Novo'} Lançamento</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Tipo</Label>
+                  <Select value={formData.type} onValueChange={(value: 'income' | 'expense') => setFormData(prev => ({ ...prev, type: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">Receita</SelectItem>
+                      <SelectItem value="expense">Despesa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Valor (R$)</Label>
+                  <Input 
+                    type="number" 
+                    value={formData.amount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Descrição</Label>
+                <Textarea 
+                  placeholder="Descrição do lançamento..." 
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data de Lançamento</Label>
+                  <Input 
+                    type="date" 
+                    value={formData.date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Data de Pagamento/Quitação</Label>
+                  <Input 
+                    type="date" 
+                    value={formData.paymentDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Categoria</Label>
+                  <Input 
+                    placeholder="Ex: Implantodontia, Material" 
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Select value={formData.status} onValueChange={(value: 'pending' | 'paid' | 'cancelled') => setFormData(prev => ({ ...prev, status: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="paid">Pago</SelectItem>
+                      <SelectItem value="cancelled">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Atendimento Vinculado (opcional)</Label>
+                <Select value={formData.treatmentId} onValueChange={(value) => setFormData(prev => ({ ...prev, treatmentId: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um atendimento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum</SelectItem>
+                    {treatments.map(t => {
+                      const patient = getPatientById(t.patientId);
+                      const template = getTemplateById(t.templateId);
+                      return (
+                        <SelectItem key={t.id} value={t.id}>
+                          {patient?.name} - {template?.name}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={() => setIsFormOpen(false)}>Cancelar</Button>
+                <Button type="submit">{editingRecord ? 'Salvar' : 'Criar'}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="border-l-4 border-l-success">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -95,6 +292,20 @@ export default function Financial() {
               </div>
               <div className="p-3 bg-primary/10 rounded-full">
                 <DollarSign className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-warning">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Pendente</p>
+                <p className="text-2xl font-bold text-warning">{formatCurrency(pendingAmount)}</p>
+              </div>
+              <div className="p-3 bg-warning/10 rounded-full">
+                <DollarSign className="h-6 w-6 text-warning" />
               </div>
             </div>
           </CardContent>
@@ -177,7 +388,7 @@ export default function Financial() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-wrap">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -195,6 +406,17 @@ export default function Financial() {
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="income">Receitas</SelectItem>
                 <SelectItem value="expense">Despesas</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="paid">Pago</SelectItem>
+                <SelectItem value="cancelled">Cancelado</SelectItem>
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -225,7 +447,9 @@ export default function Financial() {
                 <TableHead>Descrição</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -249,8 +473,23 @@ export default function Financial() {
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell>
+                    <Badge className={paymentStatusConfig[record.status].color}>
+                      {paymentStatusConfig[record.status].label}
+                    </Badge>
+                  </TableCell>
                   <TableCell className={`text-right font-semibold ${record.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                     {record.type === 'income' ? '+' : '-'} {formatCurrency(record.amount)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(record)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(record.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -258,6 +497,24 @@ export default function Financial() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

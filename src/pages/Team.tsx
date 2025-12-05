@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { users, User } from "@/data/mockData";
+import { useData } from "@/contexts/DataContext";
+import { User } from "@/data/mockData";
+import { toast } from "sonner";
 
 const roleConfig = {
   admin: { label: "Administrador", icon: Shield, color: "bg-primary/10 text-primary" },
@@ -17,8 +20,19 @@ const roleConfig = {
 };
 
 export default function Team() {
+  const { users, addUser, updateUser, deleteUser, generateId } = useData();
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    role: 'dentist' as 'admin' | 'dentist' | 'reception',
+    specialty: ''
+  });
 
   const filteredUsers = users.filter(
     u => u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -27,6 +41,48 @@ export default function Team() {
 
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 
+  const resetForm = () => {
+    setFormData({ name: '', email: '', role: 'dentist', specialty: '' });
+    setEditingUser(null);
+  };
+
+  const openEditDialog = (user: User) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      specialty: user.specialty || ''
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editingUser) {
+      updateUser(editingUser.id, formData);
+      toast.success('Membro atualizado!');
+    } else {
+      addUser({
+        id: generateId(),
+        ...formData
+      });
+      toast.success('Membro cadastrado!');
+    }
+    
+    setIsFormOpen(false);
+    resetForm();
+  };
+
+  const handleDelete = () => {
+    if (deleteId) {
+      deleteUser(deleteId);
+      toast.success('Membro excluído!');
+      setDeleteId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-slide-in">
       <div className="flex items-center justify-between">
@@ -34,7 +90,7 @@ export default function Team() {
           <h1 className="text-2xl font-bold text-foreground">Equipe</h1>
           <p className="text-muted-foreground">Gestão de dentistas e colaboradores</p>
         </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -43,20 +99,31 @@ export default function Team() {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Cadastrar Novo Membro</DialogTitle>
+              <DialogTitle>{editingUser ? 'Editar' : 'Cadastrar Novo'} Membro</DialogTitle>
             </DialogHeader>
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>Nome Completo</Label>
-                <Input placeholder="Digite o nome completo" />
+                <Input 
+                  placeholder="Digite o nome completo" 
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
               </div>
               <div>
                 <Label>E-mail</Label>
-                <Input type="email" placeholder="email@dentaltrack.com" />
+                <Input 
+                  type="email" 
+                  placeholder="email@dentaltrack.com" 
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                />
               </div>
               <div>
                 <Label>Perfil de Acesso</Label>
-                <Select>
+                <Select value={formData.role} onValueChange={(value: 'admin' | 'dentist' | 'reception') => setFormData(prev => ({ ...prev, role: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o perfil" />
                   </SelectTrigger>
@@ -69,12 +136,16 @@ export default function Team() {
               </div>
               <div>
                 <Label>Especialidade (opcional)</Label>
-                <Input placeholder="Ex: Implantodontia, Ortodontia" />
+                <Input 
+                  placeholder="Ex: Implantodontia, Ortodontia" 
+                  value={formData.specialty}
+                  onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
+                />
               </div>
-              <div className="flex justify-end gap-2 mt-4">
+              <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setIsFormOpen(false)}>Cancelar</Button>
-                <Button type="submit">Salvar Membro</Button>
-              </div>
+                <Button type="submit">{editingUser ? 'Salvar' : 'Cadastrar'}</Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -111,10 +182,10 @@ export default function Team() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(user)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive">
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(user.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -176,6 +247,24 @@ export default function Team() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este membro da equipe? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
