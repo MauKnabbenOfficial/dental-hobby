@@ -557,7 +557,7 @@ export default function Treatments() {
         open={!!selectedTreatment}
         onOpenChange={() => setSelectedTreatment(null)}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[80vw] max-w-[80vw] max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Detalhes do Atendimento</DialogTitle>
           </DialogHeader>
