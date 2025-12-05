@@ -251,6 +251,39 @@ export default function Team() {
         </CardContent>
       </Card>
 
+      {/* Stats Summary */}
+      <div className="grid grid-cols-3 gap-6">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <div className="text-3xl font-bold text-primary">
+              {
+                users.filter((u) => u.role === "dentist" || u.role === "admin")
+                  .length
+              }
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">Dentistas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <div className="text-3xl font-bold text-accent">
+              {users.filter((u) => u.role === "reception").length}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">Recepcionistas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <div className="text-3xl font-bold text-foreground">
+              {users.length}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Total da Equipe
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Team Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredUsers.map((user) => {
@@ -314,39 +347,6 @@ export default function Team() {
             </Card>
           );
         })}
-      </div>
-
-      {/* Stats Summary */}
-      <div className="grid grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-primary">
-              {
-                users.filter((u) => u.role === "dentist" || u.role === "admin")
-                  .length
-              }
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">Dentistas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-accent">
-              {users.filter((u) => u.role === "reception").length}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">Recepcionistas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-foreground">
-              {users.length}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Total da Equipe
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Delete Confirmation */}

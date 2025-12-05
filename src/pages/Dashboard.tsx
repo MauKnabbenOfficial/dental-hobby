@@ -323,8 +323,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <Button onClick={() => navigate("/atendimentos")}>
-                  <Play className="h-4 w-4 mr-2" />
-                  Abrir Atendimento
+                  Abrir Atendimentos
                 </Button>
               </div>
             </CardContent>

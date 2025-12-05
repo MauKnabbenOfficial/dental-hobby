@@ -119,11 +119,17 @@ export default function Treatments() {
   // Stage dates for new treatment - map of stage orderIndex to scheduled date
   const [stageDates, setStageDates] = useState<Record<number, string>>({});
 
-  // Get selected template stages for the form
+  // Get selected template stages for the form (new treatment)
   const selectedTemplateStages = useMemo(() => {
     if (!formData.templateId) return [];
     return getStagesByTemplateId(formData.templateId);
   }, [formData.templateId, getStagesByTemplateId]);
+
+  // Get existing stages for editing treatment
+  const editingTreatmentStages = useMemo(() => {
+    if (!editingTreatment) return [];
+    return getStagesByTreatmentId(editingTreatment.id);
+  }, [editingTreatment, getStagesByTreatmentId]);
 
   // Get all attachments from treatment stages for the info tab
   const treatmentAttachments = useMemo(() => {
@@ -186,6 +192,15 @@ export default function Treatments() {
       notes: treatment.notes || "",
       createFinancialRecord: false,
     });
+    // Load existing stage dates for editing
+    const existingStages = getStagesByTreatmentId(treatment.id);
+    const dates: Record<number, string> = {};
+    existingStages.forEach((stage) => {
+      if (stage.scheduledDate) {
+        dates[stage.orderIndex] = stage.scheduledDate;
+      }
+    });
+    setStageDates(dates);
     setIsFormOpen(true);
   };
 
@@ -203,6 +218,16 @@ export default function Treatments() {
         ...formData,
         status: editingTreatment.status,
       });
+
+      // Update stage dates if changed
+      const existingStages = getStagesByTreatmentId(editingTreatment.id);
+      existingStages.forEach((stage) => {
+        const newDate = stageDates[stage.orderIndex];
+        if (newDate !== undefined && newDate !== stage.scheduledDate) {
+          updateTreatmentStage(stage.id, { scheduledDate: newDate });
+        }
+      });
+
       toast.success("Atendimento atualizado!");
     } else {
       const treatmentId = generateId();
@@ -222,7 +247,7 @@ export default function Treatments() {
         currentStageId: "",
       });
 
-      // Copy stages from template with individual dates
+      // Copy stages from template with individual dates and checklist
       templateStages.forEach((stage, index) => {
         // Use custom date if set, otherwise use treatment start date for first stage, empty for others
         const customDate = stageDates[stage.orderIndex];
@@ -237,6 +262,8 @@ export default function Treatments() {
           orderIndex: stage.orderIndex,
           scheduledDate,
           notes: "",
+          checklistItems: stage.checklistItems || [],
+          completedChecklist: [],
         });
       });
 
@@ -449,7 +476,7 @@ export default function Treatments() {
                 </div>
               )}
 
-              {/* Stage Dates Section - only for new treatments */}
+              {/* Stage Dates Section - for new treatments */}
               {!editingTreatment && selectedTemplateStages.length > 0 && (
                 <div className="space-y-3">
                   <Separator />
@@ -510,6 +537,101 @@ export default function Treatments() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {/* Stage Dates Section - for editing treatments */}
+              {editingTreatment && editingTreatmentStages.length > 0 && (
+                <div className="space-y-3">
+                  <Separator />
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-base font-semibold">
+                      Etapas do Tratamento
+                    </Label>
+                    <Badge variant="secondary" className="ml-auto">
+                      {
+                        editingTreatmentStages.filter(
+                          (s) => s.status === "completed"
+                        ).length
+                      }
+                      /{editingTreatmentStages.length} concluídas
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ajuste as datas agendadas de cada etapa.
+                  </p>
+                  <ScrollArea className="max-h-[200px] pr-3">
+                    <div className="space-y-2">
+                      {editingTreatmentStages.map((stage) => {
+                        const statusColors = {
+                          completed: "bg-emerald-500",
+                          in_progress: "bg-blue-500",
+                          pending: "bg-slate-400",
+                          skipped: "bg-amber-500",
+                        };
+                        const statusLabels = {
+                          completed: "Concluído",
+                          in_progress: "Em andamento",
+                          pending: "Pendente",
+                          skipped: "Pulado",
+                        };
+                        return (
+                          <div
+                            key={stage.id}
+                            className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border"
+                          >
+                            <div
+                              className={`
+                              flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold
+                              ${statusColors[stage.status]}
+                            `}
+                            >
+                              {stage.status === "completed" ? (
+                                <Check className="h-4 w-4" />
+                              ) : stage.status === "skipped" ? (
+                                <SkipForward className="h-4 w-4" />
+                              ) : (
+                                stage.orderIndex
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {stage.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {statusLabels[stage.status]}
+                                {stage.checklistItems &&
+                                  stage.checklistItems.length > 0 && (
+                                    <span className="ml-1">
+                                      • {stage.completedChecklist?.length || 0}/
+                                      {stage.checklistItems.length} itens
+                                    </span>
+                                  )}
+                              </p>
+                            </div>
+                            <div className="flex-shrink-0">
+                              <Input
+                                type="date"
+                                className="w-[150px] h-8 text-sm"
+                                value={stageDates[stage.orderIndex] || ""}
+                                onChange={(e) => {
+                                  setStageDates((prev) => ({
+                                    ...prev,
+                                    [stage.orderIndex]: e.target.value,
+                                  }));
+                                }}
+                                disabled={
+                                  stage.status === "completed" ||
+                                  stage.status === "skipped"
+                                }
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </ScrollArea>
                 </div>

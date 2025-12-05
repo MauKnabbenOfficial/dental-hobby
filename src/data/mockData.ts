@@ -68,6 +68,8 @@ export interface TreatmentStage {
   dateCompleted?: string;
   notes?: string;
   attachments?: string[];
+  checklistItems?: string[];
+  completedChecklist?: string[];
 }
 
 export interface FinancialRecord {

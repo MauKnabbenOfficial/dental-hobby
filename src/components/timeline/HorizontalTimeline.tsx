@@ -14,10 +14,13 @@ import {
   Play,
   AlertTriangle,
   GripHorizontal,
+  ListChecks,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -134,6 +137,7 @@ export function HorizontalTimeline({
     diagnosis: "",
     attachments: [] as string[],
     scheduledDate: "",
+    completedChecklist: [] as string[],
   });
   const [attachmentToDelete, setAttachmentToDelete] = useState<{
     index: number;
@@ -344,6 +348,7 @@ export function HorizontalTimeline({
       diagnosis: "",
       attachments: stage.attachments || [],
       scheduledDate: stage.scheduledDate || "",
+      completedChecklist: stage.completedChecklist || [],
     });
     setIsEditing(true);
   };
@@ -355,10 +360,23 @@ export function HorizontalTimeline({
         notes: editForm.notes,
         attachments: editForm.attachments,
         scheduledDate: editForm.scheduledDate || undefined,
+        completedChecklist: editForm.completedChecklist,
       });
     }
     setIsEditing(false);
     setSelectedStage(null);
+  };
+
+  const toggleChecklistItem = (item: string) => {
+    setEditForm((prev) => {
+      const isCompleted = prev.completedChecklist.includes(item);
+      return {
+        ...prev,
+        completedChecklist: isCompleted
+          ? prev.completedChecklist.filter((i) => i !== item)
+          : [...prev.completedChecklist, item],
+      };
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -690,6 +708,65 @@ export function HorizontalTimeline({
                         )}
                       </div>
 
+                      {/* Checklist indicator */}
+                      {stage.checklistItems &&
+                        stage.checklistItems.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-border/50">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <ListChecks className="h-3.5 w-3.5" />
+                                <span className="font-medium">Checklist</span>
+                              </div>
+                              <Badge
+                                variant={
+                                  (stage.completedChecklist?.length || 0) ===
+                                  stage.checklistItems.length
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                {stage.completedChecklist?.length || 0}/
+                                {stage.checklistItems.length}
+                              </Badge>
+                            </div>
+                            <div className="space-y-1">
+                              {stage.checklistItems
+                                .slice(0, 3)
+                                .map((item, idx) => {
+                                  const isChecked =
+                                    stage.completedChecklist?.includes(item);
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center gap-1.5 text-xs"
+                                    >
+                                      {isChecked ? (
+                                        <CheckCircle2 className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                                      ) : (
+                                        <Circle className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                      )}
+                                      <span
+                                        className={cn(
+                                          "truncate",
+                                          isChecked &&
+                                            "line-through text-muted-foreground"
+                                        )}
+                                      >
+                                        {item}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              {stage.checklistItems.length > 3 && (
+                                <p className="text-[10px] text-muted-foreground pl-4">
+                                  +{stage.checklistItems.length - 3} mais...
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                       {/* Notes preview */}
                       {stage.notes && (
                         <div className="mt-3 pt-3 border-t border-border/50">
@@ -787,6 +864,73 @@ export function HorizontalTimeline({
                   rows={3}
                 />
               </div>
+
+              {/* Checklist Section */}
+              {selectedStage?.checklistItems &&
+                selectedStage.checklistItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="flex items-center gap-2">
+                        <ListChecks className="h-4 w-4" />
+                        Checklist da Etapa
+                      </Label>
+                      <Badge
+                        variant={
+                          editForm.completedChecklist.length ===
+                          selectedStage.checklistItems.length
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
+                        {editForm.completedChecklist.length}/
+                        {selectedStage.checklistItems.length} concluídos
+                      </Badge>
+                    </div>
+                    <div className="space-y-2 p-3 bg-muted/50 rounded-lg border">
+                      {selectedStage.checklistItems.map((item, idx) => {
+                        const isChecked =
+                          editForm.completedChecklist.includes(item);
+                        return (
+                          <div
+                            key={idx}
+                            className={cn(
+                              "flex items-center gap-3 p-2 rounded-md transition-colors cursor-pointer hover:bg-background",
+                              isChecked &&
+                                "bg-emerald-50 dark:bg-emerald-950/30"
+                            )}
+                            onClick={() => toggleChecklistItem(item)}
+                          >
+                            <Checkbox
+                              id={`checklist-${idx}`}
+                              checked={isChecked}
+                              onCheckedChange={() => toggleChecklistItem(item)}
+                            />
+                            <label
+                              htmlFor={`checklist-${idx}`}
+                              className={cn(
+                                "flex-1 text-sm cursor-pointer select-none",
+                                isChecked &&
+                                  "line-through text-muted-foreground"
+                              )}
+                            >
+                              {item}
+                            </label>
+                            {isChecked && (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {editForm.completedChecklist.length ===
+                      selectedStage.checklistItems.length && (
+                      <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+                        <Check className="h-3 w-3" />
+                        Todos os itens foram concluídos!
+                      </p>
+                    )}
+                  </div>
+                )}
 
               <div>
                 <Label>Diagnóstico</Label>
