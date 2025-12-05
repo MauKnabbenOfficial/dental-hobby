@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Edit, Trash2, ChevronDown, ChevronRight, Clock, DollarSign, ListChecks, X } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ChevronDown, ChevronRight, Clock, DollarSign, ListChecks, X, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +9,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useData } from "@/contexts/DataContext";
 import { ProcedureTemplate } from "@/data/mockData";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function ProcedureTemplates() {
   const { 
@@ -27,6 +29,8 @@ export default function ProcedureTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<ProcedureTemplate | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addingStageToTemplate, setAddingStageToTemplate] = useState<string | null>(null);
+  const [stageComboOpen, setStageComboOpen] = useState(false);
+  const [stageSearchValue, setStageSearchValue] = useState("");
   const [selectedStageTemplateId, setSelectedStageTemplateId] = useState<string>('');
   
   // Form state
@@ -96,31 +100,53 @@ export default function ProcedureTemplates() {
   };
 
   const handleAddStage = (templateId: string) => {
-    if (!selectedStageTemplateId) return;
-    
-    const stageTemplate = stageTemplates.find(st => st.id === selectedStageTemplateId);
-    if (!stageTemplate) return;
-    
     const existingStages = getStagesByTemplateId(templateId);
     const newOrderIndex = existingStages.length + 1;
     
-    addProcedureTemplateStage({
-      id: generateId(),
-      templateId,
-      name: stageTemplate.name,
-      orderIndex: newOrderIndex,
-      description: stageTemplate.description,
-      checklistItems: [...stageTemplate.checklistItems]
-    });
+    // Check if it's an existing stage template or custom name
+    const stageTemplate = stageTemplates.find(st => st.id === selectedStageTemplateId);
+    
+    if (stageTemplate) {
+      // Use existing template
+      addProcedureTemplateStage({
+        id: generateId(),
+        templateId,
+        name: stageTemplate.name,
+        orderIndex: newOrderIndex,
+        description: stageTemplate.description,
+        checklistItems: [...stageTemplate.checklistItems]
+      });
+    } else if (stageSearchValue.trim()) {
+      // Create custom stage with the typed name
+      addProcedureTemplateStage({
+        id: generateId(),
+        templateId,
+        name: stageSearchValue.trim(),
+        orderIndex: newOrderIndex,
+        description: '',
+        checklistItems: []
+      });
+    } else {
+      return; // No valid selection
+    }
     
     toast.success('Etapa adicionada!');
     setAddingStageToTemplate(null);
     setSelectedStageTemplateId('');
+    setStageSearchValue('');
   };
 
   const handleRemoveStage = (stageId: string) => {
     deleteProcedureTemplateStage(stageId);
     toast.success('Etapa removida!');
+  };
+
+  const getSelectedStageName = () => {
+    if (selectedStageTemplateId) {
+      const stage = stageTemplates.find(st => st.id === selectedStageTemplateId);
+      return stage?.name || '';
+    }
+    return stageSearchValue;
   };
 
   return (
@@ -271,7 +297,7 @@ export default function ProcedureTemplates() {
                         <ListChecks className="h-4 w-4" />
                         Etapas do Procedimento
                       </h4>
-                      <Dialog open={addingStageToTemplate === template.id} onOpenChange={(open) => { if (!open) { setAddingStageToTemplate(null); setSelectedStageTemplateId(''); } }}>
+                      <Dialog open={addingStageToTemplate === template.id} onOpenChange={(open) => { if (!open) { setAddingStageToTemplate(null); setSelectedStageTemplateId(''); setStageSearchValue(''); } }}>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm" onClick={() => setAddingStageToTemplate(template.id)}>
                             <Plus className="h-4 w-4 mr-1" />
@@ -284,21 +310,83 @@ export default function ProcedureTemplates() {
                           </DialogHeader>
                           <div className="space-y-4">
                             <div>
-                              <Label>Selecione um Modelo de Etapa</Label>
-                              <Select value={selectedStageTemplateId} onValueChange={setSelectedStageTemplateId}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Escolha uma etapa" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {stageTemplates.map(st => (
-                                    <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Label>Selecione ou crie uma etapa</Label>
+                              <Popover open={stageComboOpen} onOpenChange={setStageComboOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={stageComboOpen}
+                                    className="w-full justify-between mt-2"
+                                  >
+                                    {getSelectedStageName() || "Escolha ou digite uma etapa..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0" align="start">
+                                  <Command>
+                                    <CommandInput 
+                                      placeholder="Buscar ou criar etapa..." 
+                                      value={stageSearchValue}
+                                      onValueChange={(value) => {
+                                        setStageSearchValue(value);
+                                        setSelectedStageTemplateId('');
+                                      }}
+                                    />
+                                    <CommandList>
+                                      <CommandEmpty>
+                                        {stageSearchValue.trim() && (
+                                          <div className="px-2 py-3 text-sm">
+                                            <p className="text-muted-foreground mb-2">Etapa não encontrada.</p>
+                                            <Button 
+                                              variant="outline" 
+                                              size="sm" 
+                                              className="w-full"
+                                              onClick={() => {
+                                                setStageComboOpen(false);
+                                              }}
+                                            >
+                                              <Plus className="h-4 w-4 mr-2" />
+                                              Criar "{stageSearchValue}"
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </CommandEmpty>
+                                      <CommandGroup>
+                                        {stageTemplates.map((st) => (
+                                          <CommandItem
+                                            key={st.id}
+                                            value={st.name}
+                                            onSelect={() => {
+                                              setSelectedStageTemplateId(st.id);
+                                              setStageSearchValue(st.name);
+                                              setStageComboOpen(false);
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                selectedStageTemplateId === st.id ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div>
+                                              <p>{st.name}</p>
+                                              <p className="text-xs text-muted-foreground">{st.description}</p>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Selecione uma etapa existente ou digite um nome para criar uma nova.
+                              </p>
                             </div>
                             <DialogFooter>
                               <Button variant="outline" onClick={() => setAddingStageToTemplate(null)}>Cancelar</Button>
-                              <Button onClick={() => handleAddStage(template.id)} disabled={!selectedStageTemplateId}>Adicionar</Button>
+                              <Button onClick={() => handleAddStage(template.id)} disabled={!selectedStageTemplateId && !stageSearchValue.trim()}>Adicionar</Button>
                             </DialogFooter>
                           </div>
                         </DialogContent>

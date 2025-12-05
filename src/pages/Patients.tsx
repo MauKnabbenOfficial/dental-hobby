@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Phone, Mail } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Phone, Mail, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,10 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 export default function Patients() {
-  const { patients, addPatient, updatePatient, deletePatient, getTreatmentsByPatientId, generateId } = useData();
+  const { patients, addPatient, updatePatient, deletePatient, treatments, getTreatmentsByPatientId, getTemplateById, generateId } = useData();
   const [search, setSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [historyPatient, setHistoryPatient] = useState<Patient | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -81,6 +82,16 @@ export default function Patients() {
       toast.success('Paciente excluído!');
       setDeleteId(null);
     }
+  };
+
+  // Get completed treatments for a patient
+  const getCompletedTreatments = (patientId: string) => {
+    return getTreatmentsByPatientId(patientId).filter(t => t.status === 'completed');
+  };
+
+  // Get all treatments for history (including in progress and scheduled)
+  const getAllTreatmentsForHistory = (patientId: string) => {
+    return getTreatmentsByPatientId(patientId);
   };
 
   return (
@@ -215,15 +226,15 @@ export default function Patients() {
             </TableHeader>
             <TableBody>
               {filteredPatients.map((patient) => {
-                const treatments = getTreatmentsByPatientId(patient.id);
+                const patientTreatments = getTreatmentsByPatientId(patient.id);
                 return (
                   <TableRow key={patient.id}>
                     <TableCell>
                       <div>
                         <p className="font-medium">{patient.name}</p>
-                        {treatments.length > 0 && (
+                        {patientTreatments.length > 0 && (
                           <Badge variant="secondary" className="text-xs mt-1">
-                            {treatments.length} tratamento(s)
+                            {patientTreatments.length} tratamento(s)
                           </Badge>
                         )}
                       </div>
@@ -249,13 +260,16 @@ export default function Patients() {
                     <TableCell className="text-muted-foreground">{formatDate(patient.createdAt)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedPatient(patient)}>
+                        <Button variant="ghost" size="icon" onClick={() => setHistoryPatient(patient)} title="Histórico">
+                          <History className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedPatient(patient)} title="Ver detalhes">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(patient)}>
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(patient)} title="Editar">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(patient.id)}>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(patient.id)} title="Excluir">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -308,6 +322,90 @@ export default function Patients() {
                 <p className="text-sm text-muted-foreground">Endereço</p>
                 <p>{selectedPatient.address}</p>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Patient History Dialog */}
+      <Dialog open={!!historyPatient} onOpenChange={() => setHistoryPatient(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Histórico de Procedimentos - {historyPatient?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {historyPatient && (
+            <div className="space-y-4">
+              {(() => {
+                const allTreatments = getAllTreatmentsForHistory(historyPatient.id);
+                const completedTreatments = allTreatments.filter(t => t.status === 'completed');
+                
+                if (allTreatments.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <History className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Nenhum procedimento registrado para este paciente.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {completedTreatments.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-3">Procedimentos Concluídos</h4>
+                        <div className="space-y-3">
+                          {completedTreatments.map(treatment => {
+                            const template = getTemplateById(treatment.templateId);
+                            return (
+                              <div key={treatment.id} className="flex items-center justify-between p-4 bg-success/5 border border-success/20 rounded-lg">
+                                <div>
+                                  <p className="font-medium">{template?.name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Iniciado em {formatDate(treatment.startDate)}
+                                  </p>
+                                </div>
+                                <Badge className="bg-success/10 text-success">Concluído</Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {allTreatments.filter(t => t.status !== 'completed').length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-3">Em Andamento / Agendados</h4>
+                        <div className="space-y-3">
+                          {allTreatments.filter(t => t.status !== 'completed').map(treatment => {
+                            const template = getTemplateById(treatment.templateId);
+                            const statusConfig: Record<string, { label: string; color: string }> = {
+                              in_progress: { label: 'Em Andamento', color: 'bg-primary/10 text-primary' },
+                              scheduled: { label: 'Agendado', color: 'bg-muted text-muted-foreground' },
+                              cancelled: { label: 'Cancelado', color: 'bg-destructive/10 text-destructive' },
+                            };
+                            const status = statusConfig[treatment.status] || { label: treatment.status, color: 'bg-muted' };
+                            
+                            return (
+                              <div key={treatment.id} className="flex items-center justify-between p-4 bg-muted/50 border rounded-lg">
+                                <div>
+                                  <p className="font-medium">{template?.name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Iniciado em {formatDate(treatment.startDate)}
+                                  </p>
+                                </div>
+                                <Badge className={status.color}>{status.label}</Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
         </DialogContent>
