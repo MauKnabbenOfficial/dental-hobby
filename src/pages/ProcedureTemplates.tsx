@@ -356,7 +356,10 @@ export default function ProcedureTemplates() {
               Novo Modelo
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent
+            className="max-w-2xl"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>
                 {editingTemplate ? "Editar" : "Cadastrar"} Modelo de
@@ -841,7 +844,10 @@ export default function ProcedureTemplates() {
           if (!open) resetStageForm();
         }}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent
+          className="max-w-lg"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Editar Etapa</DialogTitle>
           </DialogHeader>

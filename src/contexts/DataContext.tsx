@@ -21,6 +21,9 @@ import {
 export interface ExtendedFinancialRecord extends FinancialRecord {
   paymentDate?: string;
   status: "pending" | "paid" | "cancelled";
+  responsibleType: "patient" | "clinic";
+  patientId?: string;
+  createdBy: string;
 }
 
 // Stage Template for reusable stages

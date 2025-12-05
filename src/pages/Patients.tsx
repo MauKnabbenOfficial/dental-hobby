@@ -1,12 +1,44 @@
 import { useState } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Phone, Mail, History } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Eye,
+  Phone,
+  Mail,
+  History,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { useData } from "@/contexts/DataContext";
 import { Patient } from "@/data/mockData";
@@ -15,30 +47,56 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 export default function Patients() {
-  const { patients, addPatient, updatePatient, deletePatient, treatments, getTreatmentsByPatientId, getTemplateById, generateId } = useData();
+  const {
+    patients,
+    addPatient,
+    updatePatient,
+    deletePatient,
+    treatments,
+    getTreatmentsByPatientId,
+    getTemplateById,
+    generateId,
+  } = useData();
   const [search, setSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [historyPatient, setHistoryPatient] = useState<Patient | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    name: '', cpf: '', phone: '', email: '', birthDate: '',
-    healthInsuranceId: '', healthInsuranceName: '', address: ''
+    name: "",
+    cpf: "",
+    phone: "",
+    email: "",
+    birthDate: "",
+    healthInsuranceId: "",
+    healthInsuranceName: "",
+    address: "",
   });
 
   const filteredPatients = patients.filter(
-    p => p.name.toLowerCase().includes(search.toLowerCase()) ||
-         p.cpf.includes(search) ||
-         p.email.toLowerCase().includes(search.toLowerCase())
+    (p) =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.cpf.includes(search) ||
+      p.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatDate = (dateStr: string) => format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
+  const formatDate = (dateStr: string) =>
+    format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
 
   const resetForm = () => {
-    setFormData({ name: '', cpf: '', phone: '', email: '', birthDate: '', healthInsuranceId: '', healthInsuranceName: '', address: '' });
+    setFormData({
+      name: "",
+      cpf: "",
+      phone: "",
+      email: "",
+      birthDate: "",
+      healthInsuranceId: "",
+      healthInsuranceName: "",
+      address: "",
+    });
     setEditingPatient(null);
   };
 
@@ -50,28 +108,28 @@ export default function Patients() {
       phone: patient.phone,
       email: patient.email,
       birthDate: patient.birthDate,
-      healthInsuranceId: patient.healthInsuranceId || '',
-      healthInsuranceName: patient.healthInsuranceName || '',
-      address: patient.address
+      healthInsuranceId: patient.healthInsuranceId || "",
+      healthInsuranceName: patient.healthInsuranceName || "",
+      address: patient.address,
     });
     setIsFormOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (editingPatient) {
       updatePatient(editingPatient.id, formData);
-      toast.success('Paciente atualizado!');
+      toast.success("Paciente atualizado!");
     } else {
       addPatient({
         id: generateId(),
         ...formData,
-        createdAt: new Date().toISOString().split('T')[0]
+        createdAt: new Date().toISOString().split("T")[0],
       });
-      toast.success('Paciente cadastrado!');
+      toast.success("Paciente cadastrado!");
     }
-    
+
     setIsFormOpen(false);
     resetForm();
   };
@@ -79,14 +137,16 @@ export default function Patients() {
   const handleDelete = () => {
     if (deleteId) {
       deletePatient(deleteId);
-      toast.success('Paciente excluído!');
+      toast.success("Paciente excluído!");
       setDeleteId(null);
     }
   };
 
   // Get completed treatments for a patient
   const getCompletedTreatments = (patientId: string) => {
-    return getTreatmentsByPatientId(patientId).filter(t => t.status === 'completed');
+    return getTreatmentsByPatientId(patientId).filter(
+      (t) => t.status === "completed"
+    );
   };
 
   // Get all treatments for history (including in progress and scheduled)
@@ -99,93 +159,142 @@ export default function Patients() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Pacientes</h1>
-          <p className="text-muted-foreground">Gerenciamento de pacientes da clínica</p>
+          <p className="text-muted-foreground">
+            Gerenciamento de pacientes da clínica
+          </p>
         </div>
-        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) resetForm(); }}>
+        <Dialog
+          open={isFormOpen}
+          onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               Novo Paciente
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent
+            className="max-w-2xl"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
             <DialogHeader>
-              <DialogTitle>{editingPatient ? 'Editar' : 'Cadastrar Novo'} Paciente</DialogTitle>
+              <DialogTitle>
+                {editingPatient ? "Editar" : "Cadastrar Novo"} Paciente
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Label>Nome Completo</Label>
-                <Input 
-                  placeholder="Digite o nome completo" 
+                <Input
+                  placeholder="Digite o nome completo"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                   required
                 />
               </div>
               <div>
                 <Label>CPF</Label>
-                <Input 
-                  placeholder="000.000.000-00" 
+                <Input
+                  placeholder="000.000.000-00"
                   value={formData.cpf}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, cpf: e.target.value }))
+                  }
                   required
                 />
               </div>
               <div>
                 <Label>Data de Nascimento</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={formData.birthDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      birthDate: e.target.value,
+                    }))
+                  }
                   required
                 />
               </div>
               <div>
                 <Label>Telefone</Label>
-                <Input 
-                  placeholder="(00) 00000-0000" 
+                <Input
+                  placeholder="(00) 00000-0000"
                   value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
                   required
                 />
               </div>
               <div>
                 <Label>E-mail</Label>
-                <Input 
-                  type="email" 
-                  placeholder="email@exemplo.com" 
+                <Input
+                  type="email"
+                  placeholder="email@exemplo.com"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
                   required
                 />
               </div>
               <div>
                 <Label>Convênio</Label>
-                <Input 
-                  placeholder="Nome do convênio (opcional)" 
+                <Input
+                  placeholder="Nome do convênio (opcional)"
                   value={formData.healthInsuranceName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, healthInsuranceName: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      healthInsuranceName: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <div>
                 <Label>Nº Carteirinha</Label>
-                <Input 
-                  placeholder="Número da carteirinha" 
+                <Input
+                  placeholder="Número da carteirinha"
                   value={formData.healthInsuranceId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, healthInsuranceId: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      healthInsuranceId: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <div className="col-span-2">
                 <Label>Endereço</Label>
-                <Input 
-                  placeholder="Endereço completo" 
+                <Input
+                  placeholder="Endereço completo"
                   value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      address: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <DialogFooter className="col-span-2">
-                <Button variant="outline" type="button" onClick={() => setIsFormOpen(false)}>Cancelar</Button>
-                <Button type="submit">{editingPatient ? 'Salvar' : 'Cadastrar'}</Button>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setIsFormOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {editingPatient ? "Salvar" : "Cadastrar"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -210,7 +319,9 @@ export default function Patients() {
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Lista de Pacientes ({filteredPatients.length})</CardTitle>
+          <CardTitle className="text-lg">
+            Lista de Pacientes ({filteredPatients.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -239,7 +350,9 @@ export default function Patients() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{patient.cpf}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {patient.cpf}
+                    </TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-sm">
@@ -253,23 +366,53 @@ export default function Patients() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={patient.healthInsuranceName === "Particular" || !patient.healthInsuranceName ? "outline" : "default"}>
+                      <Badge
+                        variant={
+                          patient.healthInsuranceName === "Particular" ||
+                          !patient.healthInsuranceName
+                            ? "outline"
+                            : "default"
+                        }
+                      >
                         {patient.healthInsuranceName || "Particular"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(patient.createdAt)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(patient.createdAt)}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setHistoryPatient(patient)} title="Histórico">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setHistoryPatient(patient)}
+                          title="Histórico"
+                        >
                           <History className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedPatient(patient)} title="Ver detalhes">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setSelectedPatient(patient)}
+                          title="Ver detalhes"
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(patient)} title="Editar">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(patient)}
+                          title="Editar"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteId(patient.id)} title="Excluir">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => setDeleteId(patient.id)}
+                          title="Excluir"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -283,8 +426,14 @@ export default function Patients() {
       </Card>
 
       {/* Patient Detail Dialog */}
-      <Dialog open={!!selectedPatient} onOpenChange={() => setSelectedPatient(null)}>
-        <DialogContent className="max-w-lg">
+      <Dialog
+        open={!!selectedPatient}
+        onOpenChange={() => setSelectedPatient(null)}
+      >
+        <DialogContent
+          className="max-w-lg"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Detalhes do Paciente</DialogTitle>
           </DialogHeader>
@@ -308,12 +457,20 @@ export default function Patients() {
                   <p>{selectedPatient.email}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Data de Nascimento</p>
+                  <p className="text-sm text-muted-foreground">
+                    Data de Nascimento
+                  </p>
                   <p>{formatDate(selectedPatient.birthDate)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Convênio</p>
-                  <Badge variant={selectedPatient.healthInsuranceName === "Particular" ? "outline" : "default"}>
+                  <Badge
+                    variant={
+                      selectedPatient.healthInsuranceName === "Particular"
+                        ? "outline"
+                        : "default"
+                    }
+                  >
                     {selectedPatient.healthInsuranceName || "Particular"}
                   </Badge>
                 </div>
@@ -328,8 +485,14 @@ export default function Patients() {
       </Dialog>
 
       {/* Patient History Dialog */}
-      <Dialog open={!!historyPatient} onOpenChange={() => setHistoryPatient(null)}>
-        <DialogContent className="max-w-2xl">
+      <Dialog
+        open={!!historyPatient}
+        onOpenChange={() => setHistoryPatient(null)}
+      >
+        <DialogContent
+          className="max-w-2xl"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
@@ -339,9 +502,13 @@ export default function Patients() {
           {historyPatient && (
             <div className="space-y-4">
               {(() => {
-                const allTreatments = getAllTreatmentsForHistory(historyPatient.id);
-                const completedTreatments = allTreatments.filter(t => t.status === 'completed');
-                
+                const allTreatments = getAllTreatmentsForHistory(
+                  historyPatient.id
+                );
+                const completedTreatments = allTreatments.filter(
+                  (t) => t.status === "completed"
+                );
+
                 if (allTreatments.length === 0) {
                   return (
                     <div className="text-center py-8 text-muted-foreground">
@@ -355,19 +522,31 @@ export default function Patients() {
                   <>
                     {completedTreatments.length > 0 && (
                       <div>
-                        <h4 className="font-semibold text-sm text-muted-foreground mb-3">Procedimentos Concluídos</h4>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-3">
+                          Procedimentos Concluídos
+                        </h4>
                         <div className="space-y-3">
-                          {completedTreatments.map(treatment => {
-                            const template = getTemplateById(treatment.templateId);
+                          {completedTreatments.map((treatment) => {
+                            const template = getTemplateById(
+                              treatment.templateId
+                            );
                             return (
-                              <div key={treatment.id} className="flex items-center justify-between p-4 bg-success/5 border border-success/20 rounded-lg">
+                              <div
+                                key={treatment.id}
+                                className="flex items-center justify-between p-4 bg-success/5 border border-success/20 rounded-lg"
+                              >
                                 <div>
-                                  <p className="font-medium">{template?.name}</p>
+                                  <p className="font-medium">
+                                    {template?.name}
+                                  </p>
                                   <p className="text-sm text-muted-foreground">
-                                    Iniciado em {formatDate(treatment.startDate)}
+                                    Iniciado em{" "}
+                                    {formatDate(treatment.startDate)}
                                   </p>
                                 </div>
-                                <Badge className="bg-success/10 text-success">Concluído</Badge>
+                                <Badge className="bg-success/10 text-success">
+                                  Concluído
+                                </Badge>
                               </div>
                             );
                           })}
@@ -375,31 +554,61 @@ export default function Patients() {
                       </div>
                     )}
 
-                    {allTreatments.filter(t => t.status !== 'completed').length > 0 && (
+                    {allTreatments.filter((t) => t.status !== "completed")
+                      .length > 0 && (
                       <div>
-                        <h4 className="font-semibold text-sm text-muted-foreground mb-3">Em Andamento / Agendados</h4>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-3">
+                          Em Andamento / Agendados
+                        </h4>
                         <div className="space-y-3">
-                          {allTreatments.filter(t => t.status !== 'completed').map(treatment => {
-                            const template = getTemplateById(treatment.templateId);
-                            const statusConfig: Record<string, { label: string; color: string }> = {
-                              in_progress: { label: 'Em Andamento', color: 'bg-primary/10 text-primary' },
-                              scheduled: { label: 'Agendado', color: 'bg-muted text-muted-foreground' },
-                              cancelled: { label: 'Cancelado', color: 'bg-destructive/10 text-destructive' },
-                            };
-                            const status = statusConfig[treatment.status] || { label: treatment.status, color: 'bg-muted' };
-                            
-                            return (
-                              <div key={treatment.id} className="flex items-center justify-between p-4 bg-muted/50 border rounded-lg">
-                                <div>
-                                  <p className="font-medium">{template?.name}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Iniciado em {formatDate(treatment.startDate)}
-                                  </p>
+                          {allTreatments
+                            .filter((t) => t.status !== "completed")
+                            .map((treatment) => {
+                              const template = getTemplateById(
+                                treatment.templateId
+                              );
+                              const statusConfig: Record<
+                                string,
+                                { label: string; color: string }
+                              > = {
+                                in_progress: {
+                                  label: "Em Andamento",
+                                  color: "bg-primary/10 text-primary",
+                                },
+                                scheduled: {
+                                  label: "Agendado",
+                                  color: "bg-muted text-muted-foreground",
+                                },
+                                cancelled: {
+                                  label: "Cancelado",
+                                  color: "bg-destructive/10 text-destructive",
+                                },
+                              };
+                              const status = statusConfig[treatment.status] || {
+                                label: treatment.status,
+                                color: "bg-muted",
+                              };
+
+                              return (
+                                <div
+                                  key={treatment.id}
+                                  className="flex items-center justify-between p-4 bg-muted/50 border rounded-lg"
+                                >
+                                  <div>
+                                    <p className="font-medium">
+                                      {template?.name}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      Iniciado em{" "}
+                                      {formatDate(treatment.startDate)}
+                                    </p>
+                                  </div>
+                                  <Badge className={status.color}>
+                                    {status.label}
+                                  </Badge>
                                 </div>
-                                <Badge className={status.color}>{status.label}</Badge>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
                         </div>
                       </div>
                     )}
@@ -417,12 +626,16 @@ export default function Patients() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir este paciente? Esta ação não pode
+              ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

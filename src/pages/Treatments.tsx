@@ -253,6 +253,9 @@ export default function Treatments() {
           }`,
           category: template.category,
           status: "pending",
+          responsibleType: "patient",
+          patientId: formData.patientId,
+          createdBy: "1", // TODO: usar usuário logado
         };
         addFinancialRecord(record);
       }
@@ -302,7 +305,10 @@ export default function Treatments() {
               Novo Atendimento
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent
+            className="max-w-lg max-h-[90vh] overflow-y-auto"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>
                 {editingTreatment ? "Editar" : "Iniciar Novo"} Atendimento
@@ -662,7 +668,10 @@ export default function Treatments() {
         open={!!selectedTreatment}
         onOpenChange={() => setSelectedTreatment(null)}
       >
-        <DialogContent className="w-[80vw] max-w-[80vw] max-h-[90vh] overflow-hidden">
+        <DialogContent
+          className="w-[80vw] max-w-[80vw] max-h-[90vh] overflow-hidden"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Detalhes do Atendimento</DialogTitle>
           </DialogHeader>

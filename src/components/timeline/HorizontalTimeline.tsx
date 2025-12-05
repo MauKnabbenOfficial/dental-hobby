@@ -717,7 +717,10 @@ export function HorizontalTimeline({
 
       {/* Stage Edit Dialog */}
       <Dialog open={isEditing} onOpenChange={() => setIsEditing(false)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent
+          className="max-w-lg"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
