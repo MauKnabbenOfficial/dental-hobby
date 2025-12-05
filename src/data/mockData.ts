@@ -17,7 +17,14 @@ export interface Patient {
   birthDate: string;
   healthInsuranceId?: string;
   healthInsuranceName?: string;
-  address: string;
+  // Address fields
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
   createdAt: string;
 }
 
@@ -121,9 +128,15 @@ export const patients: Patient[] = [
     phone: "(11) 99999-1234",
     email: "joao@email.com",
     birthDate: "1985-03-15",
-    healthInsuranceId: "UNIMED-12345",
+    healthInsuranceId: "UNIMED12345",
     healthInsuranceName: "Unimed",
-    address: "Rua das Flores, 123 - São Paulo, SP",
+    zipCode: "01310-100",
+    street: "Rua das Flores",
+    number: "123",
+    complement: "Apto 45",
+    neighborhood: "Jardins",
+    city: "São Paulo",
+    state: "SP",
     createdAt: "2024-01-10",
   },
   {
@@ -134,7 +147,12 @@ export const patients: Patient[] = [
     email: "maria@email.com",
     birthDate: "1990-07-22",
     healthInsuranceName: "Particular",
-    address: "Av. Paulista, 1000 - São Paulo, SP",
+    zipCode: "01310-200",
+    street: "Av. Paulista",
+    number: "1000",
+    neighborhood: "Bela Vista",
+    city: "São Paulo",
+    state: "SP",
     createdAt: "2024-02-15",
   },
   {
@@ -144,9 +162,15 @@ export const patients: Patient[] = [
     phone: "(11) 97777-9012",
     email: "carlos@email.com",
     birthDate: "1978-11-08",
-    healthInsuranceId: "AMIL-67890",
+    healthInsuranceId: "AMIL67890",
     healthInsuranceName: "Amil",
-    address: "Rua Augusta, 500 - São Paulo, SP",
+    zipCode: "01305-100",
+    street: "Rua Augusta",
+    number: "500",
+    complement: "Sala 12",
+    neighborhood: "Consolação",
+    city: "São Paulo",
+    state: "SP",
     createdAt: "2024-03-01",
   },
   {
@@ -157,7 +181,12 @@ export const patients: Patient[] = [
     email: "ana.b@email.com",
     birthDate: "1995-01-30",
     healthInsuranceName: "Bradesco Saúde",
-    address: "Rua Oscar Freire, 200 - São Paulo, SP",
+    zipCode: "01426-001",
+    street: "Rua Oscar Freire",
+    number: "200",
+    neighborhood: "Pinheiros",
+    city: "São Paulo",
+    state: "SP",
     createdAt: "2024-03-20",
   },
   {
@@ -168,7 +197,12 @@ export const patients: Patient[] = [
     email: "roberto@email.com",
     birthDate: "1982-06-12",
     healthInsuranceName: "Particular",
-    address: "Alameda Santos, 800 - São Paulo, SP",
+    zipCode: "01419-002",
+    street: "Alameda Santos",
+    number: "800",
+    neighborhood: "Cerqueira César",
+    city: "São Paulo",
+    state: "SP",
     createdAt: "2024-04-05",
   },
   {
@@ -178,9 +212,15 @@ export const patients: Patient[] = [
     phone: "(11) 94444-1234",
     email: "fernanda@email.com",
     birthDate: "1988-09-25",
-    healthInsuranceId: "SULAMERICA-11111",
+    healthInsuranceId: "SULAMERICA11111",
     healthInsuranceName: "SulAmérica",
-    address: "Rua Haddock Lobo, 350 - São Paulo, SP",
+    zipCode: "01414-001",
+    street: "Rua Haddock Lobo",
+    number: "350",
+    complement: "Bloco B",
+    neighborhood: "Jardim Paulista",
+    city: "São Paulo",
+    state: "SP",
     createdAt: "2024-04-18",
   },
 ];

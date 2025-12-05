@@ -46,7 +46,7 @@ export default function StageTemplates() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    defaultDuration: "",
+    defaultDuration: 0,
     checklistItems: [] as string[],
   });
   const [newChecklistItem, setNewChecklistItem] = useState("");
@@ -61,7 +61,7 @@ export default function StageTemplates() {
     setFormData({
       name: "",
       description: "",
-      defaultDuration: "",
+      defaultDuration: 0,
       checklistItems: [],
     });
     setNewChecklistItem("");
@@ -182,14 +182,17 @@ export default function StageTemplates() {
                 />
               </div>
               <div>
-                <Label>Duração Estimada</Label>
+                <Label>Duração Estimada (minutos)</Label>
                 <Input
-                  placeholder="Ex: 30 min"
-                  value={formData.defaultDuration}
+                  type="number"
+                  placeholder="Ex: 30"
+                  min={1}
+                  step={1}
+                  value={formData.defaultDuration || ""}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      defaultDuration: e.target.value,
+                      defaultDuration: parseInt(e.target.value) || 0,
                     }))
                   }
                 />
@@ -293,7 +296,7 @@ export default function StageTemplates() {
               <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  <span>{template.defaultDuration}</span>
+                  <span>{template.defaultDuration} min</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <ListChecks className="h-4 w-4" />

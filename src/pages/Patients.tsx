@@ -73,8 +73,44 @@ export default function Patients() {
     birthDate: "",
     healthInsuranceId: "",
     healthInsuranceName: "",
-    address: "",
+    zipCode: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
   });
+
+  // Mask functions
+  const maskCpf = (value: string) => {
+    return value
+      .replace(/\D/g, "")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+      .replace(/(-\d{2})\d+?$/, "$1");
+  };
+
+  const maskPhone = (value: string) => {
+    return value
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .replace(/(-\d{4})\d+?$/, "$1");
+  };
+
+  const maskZipCode = (value: string) => {
+    return value
+      .replace(/\D/g, "")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .replace(/(-\d{3})\d+?$/, "$1");
+  };
+
+  const sanitizeHealthInsuranceId = (value: string) => {
+    // Allow only letters and numbers
+    return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  };
 
   const filteredPatients = patients.filter(
     (p) =>
@@ -95,7 +131,13 @@ export default function Patients() {
       birthDate: "",
       healthInsuranceId: "",
       healthInsuranceName: "",
-      address: "",
+      street: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      zipCode: "",
     });
     setEditingPatient(null);
   };
@@ -104,13 +146,19 @@ export default function Patients() {
     setEditingPatient(patient);
     setFormData({
       name: patient.name,
-      cpf: patient.cpf,
-      phone: patient.phone,
+      cpf: maskCpf(patient.cpf),
+      phone: maskPhone(patient.phone),
       email: patient.email,
       birthDate: patient.birthDate,
       healthInsuranceId: patient.healthInsuranceId || "",
       healthInsuranceName: patient.healthInsuranceName || "",
-      address: patient.address,
+      street: patient.street || "",
+      number: patient.number || "",
+      complement: patient.complement || "",
+      neighborhood: patient.neighborhood || "",
+      city: patient.city || "",
+      state: patient.state || "",
+      zipCode: maskZipCode(patient.zipCode || ""),
     });
     setIsFormOpen(true);
   };
@@ -118,13 +166,21 @@ export default function Patients() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Remove masks before saving
+    const cleanData = {
+      ...formData,
+      cpf: formData.cpf.replace(/\D/g, ""),
+      phone: formData.phone.replace(/\D/g, ""),
+      zipCode: formData.zipCode.replace(/\D/g, ""),
+    };
+
     if (editingPatient) {
-      updatePatient(editingPatient.id, formData);
+      updatePatient(editingPatient.id, cleanData);
       toast.success("Paciente atualizado!");
     } else {
       addPatient({
         id: generateId(),
-        ...formData,
+        ...cleanData,
         createdAt: new Date().toISOString().split("T")[0],
       });
       toast.success("Paciente cadastrado!");
@@ -203,8 +259,12 @@ export default function Patients() {
                   placeholder="000.000.000-00"
                   value={formData.cpf}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, cpf: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      cpf: maskCpf(e.target.value),
+                    }))
                   }
+                  maxLength={14}
                   required
                 />
               </div>
@@ -228,8 +288,12 @@ export default function Patients() {
                   placeholder="(00) 00000-0000"
                   value={formData.phone}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      phone: maskPhone(e.target.value),
+                    }))
                   }
+                  maxLength={15}
                   required
                 />
               </div>
@@ -266,23 +330,112 @@ export default function Patients() {
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      healthInsuranceId: e.target.value,
+                      healthInsuranceId: sanitizeHealthInsuranceId(
+                        e.target.value
+                      ),
                     }))
                   }
                 />
               </div>
-              <div className="col-span-2">
-                <Label>Endereço</Label>
+
+              {/* Address Section */}
+              <div className="col-span-2 pt-2">
+                <Label className="text-base font-semibold">Endereço</Label>
+              </div>
+              <div>
+                <Label>CEP</Label>
                 <Input
-                  placeholder="Endereço completo"
-                  value={formData.address}
+                  placeholder="00000-000"
+                  value={formData.zipCode}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      address: e.target.value,
+                      zipCode: maskZipCode(e.target.value),
+                    }))
+                  }
+                  maxLength={9}
+                />
+              </div>
+              <div>
+                <Label>Estado</Label>
+                <Input
+                  placeholder="UF"
+                  value={formData.state}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      state: e.target.value.toUpperCase().slice(0, 2),
+                    }))
+                  }
+                  maxLength={2}
+                />
+              </div>
+              <div>
+                <Label>Cidade</Label>
+                <Input
+                  placeholder="Cidade"
+                  value={formData.city}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      city: e.target.value,
                     }))
                   }
                 />
+              </div>
+              <div>
+                <Label>Bairro</Label>
+                <Input
+                  placeholder="Bairro"
+                  value={formData.neighborhood}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      neighborhood: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <Label>Rua</Label>
+                <Input
+                  placeholder="Rua / Avenida"
+                  value={formData.street}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      street: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Número</Label>
+                  <Input
+                    placeholder="Nº"
+                    value={formData.number}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        number: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Complemento</Label>
+                  <Input
+                    placeholder="Apto, Sala..."
+                    value={formData.complement}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        complement: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
               </div>
               <DialogFooter className="col-span-2">
                 <Button
@@ -351,13 +504,13 @@ export default function Patients() {
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {patient.cpf}
+                      {maskCpf(patient.cpf)}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-sm">
                           <Phone className="h-3 w-3" />
-                          {patient.phone}
+                          {maskPhone(patient.phone)}
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Mail className="h-3 w-3" />
@@ -446,11 +599,11 @@ export default function Patients() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">CPF</p>
-                  <p className="font-mono">{selectedPatient.cpf}</p>
+                  <p className="font-mono">{maskCpf(selectedPatient.cpf)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Telefone</p>
-                  <p>{selectedPatient.phone}</p>
+                  <p>{maskPhone(selectedPatient.phone)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">E-mail</p>
@@ -477,7 +630,25 @@ export default function Patients() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Endereço</p>
-                <p>{selectedPatient.address}</p>
+                <p>
+                  {[
+                    selectedPatient.street &&
+                      `${selectedPatient.street}${
+                        selectedPatient.number
+                          ? `, ${selectedPatient.number}`
+                          : ""
+                      }`,
+                    selectedPatient.complement,
+                    selectedPatient.neighborhood,
+                    selectedPatient.city && selectedPatient.state
+                      ? `${selectedPatient.city} - ${selectedPatient.state}`
+                      : selectedPatient.city || selectedPatient.state,
+                    selectedPatient.zipCode &&
+                      maskZipCode(selectedPatient.zipCode),
+                  ]
+                    .filter(Boolean)
+                    .join(", ") || "Não informado"}
+                </p>
               </div>
             </div>
           )}

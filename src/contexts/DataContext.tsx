@@ -31,7 +31,7 @@ export interface StageTemplate {
   id: string;
   name: string;
   description: string;
-  defaultDuration: string;
+  defaultDuration: number; // Duration in minutes
   checklistItems: string[];
 }
 
@@ -116,7 +116,7 @@ const initialStageTemplates: StageTemplate[] = [
     id: "st1",
     name: "Anestesia",
     description: "Aplicação de anestesia local",
-    defaultDuration: "15 min",
+    defaultDuration: 15,
     checklistItems: [
       "Verificar alergias",
       "Preparar material",
@@ -127,14 +127,14 @@ const initialStageTemplates: StageTemplate[] = [
     id: "st2",
     name: "Consulta Inicial",
     description: "Primeira avaliação do paciente",
-    defaultDuration: "30 min",
+    defaultDuration: 30,
     checklistItems: ["Anamnese", "Exame clínico", "Radiografias iniciais"],
   },
   {
     id: "st3",
     name: "Cirurgia",
     description: "Procedimento cirúrgico",
-    defaultDuration: "1-2h",
+    defaultDuration: 90,
     checklistItems: [
       "Checklist pré-operatório",
       "Equipamentos",
@@ -145,21 +145,21 @@ const initialStageTemplates: StageTemplate[] = [
     id: "st4",
     name: "Retorno",
     description: "Consulta de acompanhamento",
-    defaultDuration: "20 min",
+    defaultDuration: 20,
     checklistItems: ["Avaliação cicatrização", "Orientações"],
   },
   {
     id: "st5",
     name: "Moldagem",
     description: "Tomada de moldes",
-    defaultDuration: "30 min",
+    defaultDuration: 30,
     checklistItems: ["Preparar material", "Moldagem", "Enviar laboratório"],
   },
   {
     id: "st6",
     name: "Raio-X",
     description: "Exames radiográficos",
-    defaultDuration: "15 min",
+    defaultDuration: 15,
     checklistItems: ["Posicionamento", "Tomada radiográfica", "Análise"],
   },
 ];
